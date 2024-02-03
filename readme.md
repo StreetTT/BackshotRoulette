@@ -14,6 +14,7 @@ The game is implemented using Python 3 and utilizes various modules such as `ran
 The game flow involves a loop where players take turns performing actions such as shooting, using items, and interacting with the game environment. The script logs various game events using the Python `logging` module. Game data is saved in a JSON file with a filename based on the current date and time.
 
 ## Updates
+- **3 Feb 2024**: Random Bot now added to the game, allowing for 1 or 2 player games.Also added a simulation program that allows you generate games between bots
 - **3 Feb 2024**: This Read Me exists!! The game now has logging and a save mechanism as well as the game being generally tidied up.
 
 ## Future Plans

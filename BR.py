@@ -11,6 +11,8 @@ logger: Logger = CreateLogger("BRLogger")
 
 
 # Types used within the program to help with keeping track
+ModeData = dict[str, str]
+PlayerData = dict[str, int]
 RoundInfo = dict[str, int]
 ItemData = dict[str, str]
 ShotData = dict[str, str]
@@ -19,14 +21,11 @@ RoundData =  dict[str, list[ItemData | LoadData | ShotData ] | RoundInfo]
 
 
 class BR():
-    def __init__(self, doubleOrNothing: bool = False) -> None:
+    def __init__(self, doubleOrNothing: bool = False, sim: bool = False) -> None:
         self.__name: str = ""
-        self.__gameData: dict[str, list[RoundData]] = {}
+        self.__gameData: dict[str, dict[str, PlayerData | ModeData | list[RoundData]]] = {}
         self.__doubleOrNothing: bool = doubleOrNothing
-        self.__players: list[Player] = [
-            Player(), 
-            Player()
-        ]
+        self.__players: list[Player] = [Bot() if sim else Player()]
         self.__rounds:list[RoundInfo] = [
             {
                 "MaxHealth": 2,
@@ -52,12 +51,16 @@ class BR():
         self.__currentRound: int = 0
         self.__gun: Gun = Gun()
     
-    def PlayGame(self) -> dict[str, list[RoundData]]:
+    def PlayGame(self) -> dict[str, dict[str, ModeData | list[RoundData]]]:
         print("Welcome to Buckshot Roulette")
+        print()
+        modeData: ModeData = self.__SelectMode()
+        print()
         self.__EnterNames()
         print(self.__name)
-        logger.info(self.__name)
-        self.__gameData.update({self.__name: []})
+        self.__gameData.update({self.__name: {"Mode": modeData}})
+        logger.info(self.__gameData)
+        self.__gameData[self.__name].update({"Game": []})
         for index, roundInfo in enumerate(self.__rounds):
             round: RoundData = {
                 "Info": roundInfo,
@@ -68,10 +71,11 @@ class BR():
             self.__SetRound()
             print("-")
             while not self.__IsRoundOver():
-                loadInfo: LoadData | None = self.__NewLoad()
-                round["History"].append(loadInfo) if loadInfo is not None else None
                 choice:int = -1
                 while choice not in (1,0):
+                    if self.__gun._IsEmpty():
+                        loadInfo: LoadData | None = self.__NewLoad()
+                        round["History"].append(loadInfo)
                     
                     self.__ShowInfo()
                     print("-")
@@ -93,9 +97,35 @@ class BR():
                 
                 # Uncuff players and Uncrit gun
                 self.__EndTurn()
-            self.__gameData[self.__name].append(round)
+            self.__gameData[self.__name]["Game"].append(round)
+        self.__gameData[self.__name].update({
+            "Players": {
+                self.__players[0]._GetName() : self.__players[0]._GetWins(),
+                self.__players[1]._GetName() : self.__players[1]._GetWins()
+            }
+        })
         logger.info("Game Saved under '" + self.__SaveGame() + "'")
         return self.__gameData
+    
+    def __SelectMode(self) -> ModeData:
+        options: list[str] = ["Player vs. Player", "Player vs. Bot"]
+        print("Select game mode:")
+        for index, option in enumerate(options):
+            print(f"({str(index + 1)}) {option}")
+        while True:
+            try:
+                choice = int((2) if isinstance(self.__players[0], Bot) else (self.__currentPlayer._GetInput()))
+                if choice not in (2,1):
+                    raise IndexError
+                if choice == 1:
+                    self.__players.append(Player())
+                else:
+                    self.__players.append(Bot())
+                return {"Mode" : ("Bot vs. Bot") if isinstance(self.__players[0], Bot) else (options[choice-1]) }
+            except ValueError:
+                logger.error("Invalid input. Please enter an integer.")
+            except IndexError:
+                logger.error("Please select a valid option (1,2)")
     
     def __SaveGame(self) -> str:
         if not path.exists('log'):
@@ -108,13 +138,13 @@ class BR():
     def __ActionMenu(self) -> int:
         print(self.__currentPlayer._GetName() + "'s Turn") 
         print("Select an Action:")
-        print(f"(1) Shoot {self.__currentPlayer._GetName()}")
+        print(f"(1) Shoot Yourself ({self.__currentPlayer._GetName()})")
         for index, item in enumerate(eval(str(self.__currentPlayer._GetGallery()))):
             print(f"({index+2}) {item}")
-        print(f"(0) Shoot {self.__GetOpponent()._GetName()}")
+        print(f"(0) Shoot Opponent ({self.__GetOpponent()._GetName()})")
         while True:
             try:
-                choice = int(input())
+                choice = int(self.__currentPlayer._GetInput())
                 if choice not in tuple(range(0,9)):
                     raise IndexError
                 return choice
@@ -127,7 +157,7 @@ class BR():
         while True:
             for index, player in enumerate(self.__players):
                 player._SetName(
-                    input(f"Enter Player {index+1}'s Name: ")
+                    ("") if isinstance(player, Bot) else (input(f"Enter Player {index+1}'s Name: "))
                 )
             if self.__players[0]._GetName() != self.__players[1]._GetName():
                 self.__name: str = f"{self.__players[0]._GetName()} vs. {self.__players[1]._GetName()}"
@@ -143,9 +173,7 @@ class BR():
             )
             player._GetGallery()._Clear()
 
-    def __NewLoad(self) -> LoadData | None:
-        if not self.__gun._IsEmpty():
-            return None
+    def __NewLoad(self) -> LoadData:
         self.__gun._Load()
         print("The gun holds: ")
         self.__gun._ShowBulletsGraphically()
@@ -237,9 +265,6 @@ class BR():
             return data
     
     def __ShootSomeone(self, choice:int) -> tuple[int, ShotData | None]:
-        if self.__gun._IsEmpty():
-            logger.error("The Gun is empty")
-            return (0, None)
         impact:int = self.__gun._Shoot()
         player: Player = self.__currentPlayer if choice == 1 else self.__GetOpponent()
         player._ModifyHealth(
@@ -299,6 +324,22 @@ class Player:
     
     def _GetWins(self) -> int:
         return self.__wins
+
+    def _GetInput(self) -> int:
+        return input()
+
+
+class Bot(Player):
+    def __init__(self) -> None:
+        super().__init__()
+    
+    def _SetName(self, name:str="") -> None:
+        super()._SetName(choices(["Kai", "Zane", "Cole", "Jay", "Lloyd"])[0])
+
+    def _GetInput(self) -> int:
+        choice: int = randint(0,9)
+        print(str(choice))
+        return choice
 
 
 class Gun:
