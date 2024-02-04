@@ -2,7 +2,7 @@ from random import choices, randint, shuffle
 from typing import Callable
 from LogSetup import CreateLogger
 from logging import Logger
-from json import dump
+from json import dumps, load, dump
 from datetime import datetime as dt
 from os import makedirs, path
 
@@ -58,7 +58,7 @@ class BR():
         print()
         self.__EnterNames()
         print(self.__name)
-        self.__gameData.update({self.__name: {"Mode": modeData}})
+        self.__gameData.update({self.__name: modeData})
         logger.info(self.__gameData)
         self.__gameData[self.__name].update({"Game": []})
         for index, roundInfo in enumerate(self.__rounds):
@@ -78,14 +78,17 @@ class BR():
                         round["History"].append(loadInfo)
                     
                     self.__ShowInfo()
+                    oldState = self.__GetState()
                     print("-")
-                    choice = self.__ActionMenu()
+                    choice = self.__ActionMenu(oldState)
                     print("-")
                     if choice in tuple(range(2,9)):
-                        action: ItemData = self.__UseItem(choice)
+                        actionData, reward = self.__UseItem(choice)
                     else:
-                        impact , action = self.__ShootSomeone(choice)
-                    round["History"].append(action) if action is not None else None
+                        impact , actionData, reward = self.__ShootSomeone(choice)
+                    round["History"].append(actionData) if actionData is not None else None
+                    newState = self.__GetState()
+                    self.__currentPlayer._Learn(oldState, choice, reward, newState) if isinstance(self.__currentPlayer, Bot) else None
 
                 # If player shoots themselves with a blank, they get a second turn
                 if impact != 0 or choice != 1:
@@ -98,12 +101,11 @@ class BR():
                 # Uncuff players and Uncrit gun
                 self.__EndTurn()
             self.__gameData[self.__name]["Game"].append(round)
-        self.__gameData[self.__name].update({
-            "Players": {
-                self.__players[0]._GetName() : self.__players[0]._GetWins(),
-                self.__players[1]._GetName() : self.__players[1]._GetWins()
-            }
-        })
+        self.__gameData[self.__name].update({"Players": {}})
+        for player in self.__players:
+            self.__gameData[self.__name]["Players"].update({player._GetName() : player._GetWins()})
+            if isinstance(player, Bot):
+                player._SaveBot()
         logger.info("Game Saved under '" + self.__SaveGame() + "'")
         return self.__gameData
     
@@ -114,7 +116,7 @@ class BR():
             print(f"({str(index + 1)}) {option}")
         while True:
             try:
-                choice = int((2) if isinstance(self.__players[0], Bot) else (self.__currentPlayer._GetInput()))
+                choice = int((2) if isinstance(self.__players[0], Bot) else (self.__currentPlayer._GetInput({})))
                 if choice not in (2,1):
                     raise IndexError
                 if choice == 1:
@@ -133,9 +135,9 @@ class BR():
         filename: str = dt.now().strftime(f'log/{self.__name.replace(" ","_")}-%d_%b_%y_%Hh_%Mm_%Ss.json') 
         with open(filename, 'w') as json_file:
             dump(self.__gameData, json_file, indent=4)
-            return filename
+        return filename
         
-    def __ActionMenu(self) -> int:
+    def __ActionMenu(self, state) -> int:
         print(self.__currentPlayer._GetName() + "'s Turn") 
         print("Select an Action:")
         print(f"(1) Shoot Yourself ({self.__currentPlayer._GetName()})")
@@ -144,7 +146,7 @@ class BR():
         print(f"(0) Shoot Opponent ({self.__GetOpponent()._GetName()})")
         while True:
             try:
-                choice = int(self.__currentPlayer._GetInput())
+                choice = int(self.__currentPlayer._GetInput(state))
                 if choice not in tuple(range(0,9)):
                     raise IndexError
                 return choice
@@ -204,6 +206,22 @@ class BR():
             print(f"{player._GetName()} is Cuffed") if player._IsCuffed() else None
             print()
         print(f"Gun is{'' if self.__gun._GetCrit() else ' NOT'} dealing double damage")
+
+    def __GetState(self) -> dict[str, dict[str, bool | dict[str, int] ] | dict[str, bool | list[Callable] | int ]]:
+        stateInfo = {}
+        for player in self.__players:
+            stateInfo.update({
+                "Player" if player == self.__currentPlayer else "Opponent": {
+                    "Hearts": player._GetHealth(),
+                    "Items": eval(str(player._GetGallery())),
+                    "Cuffed": player._IsCuffed()
+                }
+            })
+        stateInfo.update({"Gun": {
+            "Bullets" : self.__gun._CountBullets(),
+            "Crit": self.__gun._GetCrit()
+        }})
+        return stateInfo
                 
     def __IsRoundOver(self) -> bool:
         roundOver: bool = self.__GetOpponent()._GetHealth() == 0 or self.__currentPlayer._GetHealth() == 0
@@ -253,8 +271,10 @@ class BR():
         else:
             print("DEAD")
     
-    def __UseItem(self, choice:int) -> ItemData | None:
+    def __UseItem(self, choice:int) -> tuple[ItemData | None, int]:
         item: Callable | None = self.__currentPlayer._GetGallery()._Use(choice-2)
+        data = {}
+        reward = 0
         if item is not None:
             data: dict[str, str] = {
                 "Type": item.__name__[2:],
@@ -262,9 +282,10 @@ class BR():
             }
             logger.info(data)
             item()
-            return data
+            reward = -1
+        return (data, reward)
     
-    def __ShootSomeone(self, choice:int) -> tuple[int, ShotData | None]:
+    def __ShootSomeone(self, choice:int) -> tuple[int, ShotData | None, int]:
         impact:int = self.__gun._Shoot()
         player: Player = self.__currentPlayer if choice == 1 else self.__GetOpponent()
         player._ModifyHealth(
@@ -280,22 +301,23 @@ class BR():
         print("The bullet was:",end = " ")
         print("LIVE" if impact else "DEAD") 
         logger.info(data)
-        return (impact, data)
+        reward: int =  2 if (choice == 1 and impact == 0) else ((-impact * 5) if choice == 1 else (impact * 5))
+        return (impact, data, reward)
         
 
 class Player:
     def __init__(self) -> None:
-        self.__name: str = ""
+        self._name: str = ""
         self.__health: int = 0
         self.__gallery: Gallery = Gallery()
         self.__cuffed: bool = False
         self.__wins: int = 0
     
     def _SetName(self, name:str) -> None:
-        self.__name = name
+        self._name = name
 
     def _GetName(self) -> str:
-        return self.__name
+        return self._name
     
     def _SetHeath(self, health: int) -> None:
         self.__health = health
@@ -325,22 +347,62 @@ class Player:
     def _GetWins(self) -> int:
         return self.__wins
 
-    def _GetInput(self) -> int:
+    def _GetInput(self, state) -> int:
         return input()
 
 
 class Bot(Player):
     def __init__(self) -> None:
         super().__init__()
+        self.__actionSpace = [str(n) for n in list(range(10))]
+        self.__qTable = {}
+        self.__alpha = 0.1 
+        self.__gamma = 0.95 
+        self.__epsilon = 0.1 
     
     def _SetName(self, name:str="") -> None:
         super()._SetName(choices(["Kai", "Zane", "Cole", "Jay", "Lloyd"])[0])
+        if not path.exists('bots'):
+            makedirs('bots')
+        filename: str = f'bots/{self._name}.json'
+        if path.exists(filename):
+            with open(filename, 'r') as json_file:
+                self.__qTable = load(json_file)
 
-    def _GetInput(self) -> int:
-        choice: int = randint(0,9)
+    def _GetInput(self, state) -> int:
+        stateStr = dumps(state, sort_keys=True)
+        if stateStr not in self.__qTable:
+            self._AddToStateSpace(stateStr)
+
+        if randint(0, 99) < self.__epsilon * 100:
+            choice = randint(0,9)  # Explore
+        else:
+            choice = max(self.__qTable[stateStr], key=self.__qTable[stateStr].get)  # Exploit
         print(str(choice))
         return choice
 
+    def _AddToStateSpace(self, stateStr) -> None:
+        self.__qTable.update({stateStr : {str(action): 0.0 for action in self.__actionSpace}})
+    
+    def _Learn(self, oldState, action, reward, newState) -> None:
+        action = str(action)
+        oldStateStr = dumps(oldState, sort_keys=True)
+        if oldStateStr not in self.__qTable:
+            self._AddToStateSpace(oldStateStr)
+        newStateStr = dumps(newState, sort_keys=True)
+        if newStateStr not in self.__qTable:
+            self._AddToStateSpace(newStateStr)
+        maxFutureQ = max(self.__qTable[newStateStr].values())
+        oldQ = self.__qTable[oldStateStr][action]
+        newQ = (1 - self.__alpha) * oldQ + self.__alpha * (reward + self.__gamma * maxFutureQ)
+        self.__qTable[oldStateStr][action] = newQ
+    
+    def _SaveBot(self) -> None:
+        if not path.exists('bots'):
+            makedirs('bots')
+        filename: str = f'bots/{self._name}.json'
+        with open(filename, 'w') as json_file:
+            dump(self.__qTable, json_file, indent=4)
 
 class Gun:
     def __init__(self) -> None:
@@ -398,6 +460,13 @@ class Gun:
     def _Empty(self) -> None:
         self.__chamber = []
 
+    def _CountBullets(self) -> dict[str, int]:
+        liveCount: int = len([bullet for bullet in self.__chamber if bullet])
+        return {
+            "Live": liveCount,
+            "Dead": len(self.__chamber) - liveCount
+        }
+        
 
 class Gallery:
     def __init__(self) -> None:

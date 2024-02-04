@@ -34,13 +34,14 @@ if __name__ == "__main__":
             winner: str = max(playersData, key=playersData.get)
             for player in list(playersData.keys()):
                 players[player]["Plays"] += 1
+            print(gameName + " - " + player)
         except Exception as e:
             # Log the exception
             import traceback
             logger.fatal(traceback.format_exc())
             winner = "No One"
+            print()
         players[winner]["Wins"] += 1
-        print(gameName + " - " + player)
     filename:str = "SimulationOverview.json"
     with open(filename, 'w') as json_file:
         dump(players, json_file, indent=4)
