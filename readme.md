@@ -1,7 +1,7 @@
 # Buckshot Roulette
 
 ## Description
-Buckshot Roulette is a text-based Python game script that recreates the well known game of the same name. The Russian Roulette-style game revolves around players taking turns shooting, using items, and managing their health until a round is over. Players must strategies, using various items with different effects to win 3 rounds.
+Buckshot Roulette is a text-based Python game script that recreates the well known game of the [same name](https://mikeklubnika.itch.io/buckshot-roulette). The Russian Roulette-style game revolves around players taking turns shooting, using items, and managing their health until a round is over. Players must strategies, using various items with different effects to win 3 rounds.
 
 ## Implementation
 The game is implemented using Python 3 and utilizes various modules such as `random`, `logging`, and `json` for functionality. It consists of several classes:
