@@ -4,7 +4,7 @@ from sys import stdout
 def CreateLogger(name:str) -> Logger:
     logger: Logger = getLogger(name)
     format: Formatter = Formatter(
-        "%(asctime)s | %(name)s.%(threadName)s | %(levelname)s | %(message)s",
+        "%(asctime)s.%(msecs)03d | %(name)s.%(threadName)s | %(levelname)s | %(message)s",
         datefmt="%d %b %y %H:%M:%S"
     )
     logger.setLevel(DEBUG)

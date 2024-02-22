@@ -1,0 +1,6 @@
+{
+    "qTable": {},
+    "alpha" : 0.7,
+    "gamma" : 0.1,
+    "epsilon" : 0.2
+}
