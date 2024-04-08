@@ -47,7 +47,8 @@ class BR():
             self.__Glass, 
             self.__Drugs,
             self.__Cuffs, 
-            self.__Voddy  # Demo Reference
+            self.__Voddy,  # Demo Reference
+            self.__Twist
         ]
         self.__currentPlayer: Player = self.__players[0]
         self.__currentRound: int = 0
@@ -89,7 +90,7 @@ class BR():
                     print("-")
                     choice = self.__ActionMenu(state)
                     print("-")
-                    if choice in ("C","G","V","D","K"):
+                    if choice in ("C","G","V","D","K","T"):
                         actionData, reward = self.__UseItem(choice)
                     else:
                         impact , actionData, reward = self.__ShootSomeone(int(choice))
@@ -178,7 +179,7 @@ class BR():
             if self.__players[0]._GetName() != self.__players[1]._GetName():
                 self.__name: str = f"{self.__players[0]._GetName()} vs. {self.__players[1]._GetName()}"
                 return
-            logger.warn("Both players need different names")
+            logger.warning("Both players need different names")
 
     def __SetRound(self) -> None:
         print(f"Round {self.__currentRound + 1}")
@@ -287,6 +288,10 @@ class BR():
             print("LIVE")
         else:
             print("DEAD")
+    
+    def __Twist(self) -> None:
+        print("The bullet has been Twisted")
+        self.__gun._Twist()
     
     def __UseItem(self, choice:str) -> tuple[ItemData | None, int]:
         item: Callable | None = self.__currentPlayer._GetGallery()._Use(choice)
@@ -428,7 +433,7 @@ class Bot(Player):
         else:
             # If the action does not exist in the current state, ignore or log this learning attempt
             # This can be replaced or enhanced with logging if needed
-            logger.warn(f"Action {action} was not valid for the current state and was skipped in learning.")
+            logger.warning(f"Action {action} was not valid for the current state and was skipped in learning.")
         
         self.__oldStateStr = self._GetStateStr(newState)  # Update the old state to the new state
     
@@ -510,7 +515,9 @@ class Gun:
             "Live": liveCount,
             "Dead": len(self.__chamber) - liveCount
         }
-        
+    
+    def _Twist(self):
+        self.__chamber[0] = not self.__chamber[0]
 
 class Gallery:
     def __init__(self) -> None:
