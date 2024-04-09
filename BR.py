@@ -22,46 +22,33 @@ RoundData =  dict[str, list[ItemData | LoadData | ShotData ] | RoundInfo]
 
 
 class BR():
-    def __init__(self, doubleOrNothing: bool = False, sim: bool = False) -> None:
+    def __init__(self, sim: bool = False) -> None:
         self.__name: str = ""
         self.__sim = sim
         self.__gameData: dict[str, dict[str, PlayerData | ModeData | list[RoundData]]] = {}
-        self.__doubleOrNothing: bool = doubleOrNothing
         self.__players: list[Player] = [Bot() if sim else Player()]
-        self.__rounds:list[RoundInfo] = [
-            {
-                "MaxHealth": 2,
-                "ItemsPerLoad": 0
-            },
-            {
-                "MaxHealth": 4,
-                "ItemsPerLoad": 2
-            }, 
-            {
-                "MaxHealth": 6,
-                "ItemsPerLoad": 4
-            }
-        ]
-        self.__ITEMS: list[Callable] = [
+        self.__Items: list[Callable] = [
             self.__Knife, 
             self.__Glass, 
             self.__Drugs,
             self.__Cuffs, 
-            self.__Voddy,  # Demo Reference
-            self.__Twist
+            self.__Voddy  # Demo Reference
         ]
         self.__currentPlayer: Player = self.__players[0]
         self.__currentRound: int = 0
         self.__gun: Gun = Gun()
+        self.__rounds:list[RoundInfo] = []
     
     def PlayGame(self) -> dict[str, dict[str, ModeData | list[RoundData]]]:
         print("Welcome to Buckshot Roulette")
         print()
-        modeData: ModeData = self.__SelectMode()
+        PlayModeData: ModeData = self.__SelectPlayMode()
+        print()
+        GameModeData: ModeData = self.__SelectGameMode()
         print()
         self.__EnterNames()
         print(self.__name)
-        self.__gameData.update({self.__name: modeData})
+        self.__gameData.update({self.__name: {"Mode": [PlayModeData, GameModeData]}})
         logger.info(self.__gameData)
         self.__gameData[self.__name].update({"Game": []})
         for index, roundInfo in enumerate(self.__rounds):
@@ -90,7 +77,7 @@ class BR():
                     print("-")
                     choice = self.__ActionMenu(state)
                     print("-")
-                    if choice in ("C","G","V","D","K","T"):
+                    if choice in [str(item.__name__)[2] for item in self.__Items]:
                         actionData, reward = self.__UseItem(choice)
                     else:
                         impact , actionData, reward = self.__ShootSomeone(int(choice))
@@ -123,9 +110,9 @@ class BR():
         if not self.__sim:
             sleep(secs)
 
-    def __SelectMode(self) -> ModeData:
+    def __SelectPlayMode(self) -> ModeData:
         options: list[str] = ["Player vs. Player", "Player vs. Bot"]
-        print("Select game mode:")
+        print("Select play mode:")
         for index, option in enumerate(options):
             print(f"({str(index + 1)}) {option}")
         while True:
@@ -137,11 +124,58 @@ class BR():
                     self.__players.append(Player())
                 else:
                     self.__players.append(Bot())
-                return {"Mode" : ("Bot vs. Bot") if isinstance(self.__players[0], Bot) else (options[choice-1]) }
+                return {"Play Mode" : ("Bot vs. Bot") if isinstance(self.__players[0], Bot) else (options[choice-1]) }
             except ValueError:
                 logger.error("Invalid input. Please enter an integer.")
             except IndexError:
                 logger.error("Please select a valid option (1,2)")
+    
+    def __SelectGameMode(self) -> ModeData:
+        options: list[str] = ["Story Mode", "Double Or Nothing"]
+        print("Select game mode:")
+        for index, option in enumerate(options):
+            print(f"({str(index + 1)}) {option}")
+        while True:
+            try:
+                choice = int((2) if isinstance(self.__players[0], Bot) else (self.__currentPlayer._GetInput({})))
+                if choice not in (2,1):
+                    raise IndexError
+                self.__SetGameMode(choice)
+                return {"Game Mode" : options[choice-1] }
+            except ValueError:
+                logger.error("Invalid input. Please enter an integer.")
+            except IndexError:
+                logger.error("Please select a valid option (1,2)")
+    
+    def __SetGameMode(self, choice) -> None:
+        self.__doubleOrNothing: bool = True if choice == 2 else False
+        if not self.__doubleOrNothing:
+            self.__rounds:list[RoundInfo] = [
+                {
+                    "MaxHealth": 2,
+                    "ItemsPerLoad": 0
+                },
+                {
+                    "MaxHealth": 4,
+                    "ItemsPerLoad": 2
+                }, 
+                {
+                    "MaxHealth": 6,
+                    "ItemsPerLoad": 4
+                }
+            ]
+        else:
+            for _ in range(3):
+                self.__rounds.append({
+                    "MaxHealth": randint(2,4),
+                    "ItemsPerLoad": randint(1,4)
+                })
+        if self.__doubleOrNothing:
+            self.__Items += [
+                self.__Twist,
+                self.__Spike,
+                self.__8Ball
+            ]
     
     def __SaveGame(self) -> str:
         if not path.exists('log'):
@@ -209,7 +243,7 @@ class BR():
             items: int = self.__rounds[self.__currentRound]["ItemsPerLoad"]
             while items != 0 and not player._GetGallery()._IsFull():
                 player._GetGallery()._Add(
-                    choices(self.__ITEMS)[0]
+                    choices(self.__Items)[0]
                 )
                 items -= 1
             loadInfo["Items"][player._GetName()] = str(player._GetGallery())
@@ -293,6 +327,19 @@ class BR():
         print("The bullet has been Twisted")
         self.__gun._Twist()
     
+    def __Spike(self) -> None:
+        spike = 2 if randint(0, 99) < 40 else -1
+        self.__currentPlayer._ModifyHealth(spike, self.__rounds[self.__currentRound]['MaxHealth'])
+        print(self.__currentPlayer._GetName() + "'s health = " + str(self.__currentPlayer._GetHealth()))
+    
+    def __8Ball(self) -> None:
+        bullet = self.__gun._RandPeek()
+        print(f"Bullet {bullet[0]} is", end=": ")
+        if bullet[1]:
+            print("LIVE")
+        else:
+            print("DEAD")
+
     def __UseItem(self, choice:str) -> tuple[ItemData | None, int]:
         item: Callable | None = self.__currentPlayer._GetGallery()._Use(choice)
         data = {}
@@ -518,6 +565,10 @@ class Gun:
     
     def _Twist(self):
         self.__chamber[0] = not self.__chamber[0]
+    
+    def _RandPeek(self) -> tuple[int, bool]:
+        bullet = randint(0, len(self.__chamber) - 1)
+        return (bullet + 1, self.__chamber[bullet])
 
 class Gallery:
     def __init__(self) -> None:

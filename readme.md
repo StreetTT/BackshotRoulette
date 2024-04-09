@@ -14,6 +14,7 @@ The game is implemented using Python 3 and utilizes various modules such as `ran
 The game flow involves a loop where players take turns performing actions such as shooting, using items, and interacting with the game environment. The script logs various game events using the Python `logging` module. Game data is saved in a JSON file with a filename based on the current date and time.
 
 ## Updates
+- **9 Apr 2024**: 2 NEW ITEMS - SPIKE AND 8BALL. Spike give you a 40% chance to gain 2 health, but you may lose one, whereas 8Ball tells you whether a random bullet is live or dead. Also, Double or Nothing Mode can now be set in game.
 - **8 Apr 2024**: NEW ITEM - TWIST. (If you cannot tell there is now a compulsion for them all to be 5 letters long) Flips the top bullet whether from live to dead ot from dead to live. More coming soon to match new update.
 - **22 Feb 2024**: The Q-Learning algorithm has been tied up and full games can now be played with no errors
 - **4 Feb 2024**: The Q-Learning and epsilon-greedy algorithms have been implemented, allowing for some learning to take place and game play against a slightly smart bot.
