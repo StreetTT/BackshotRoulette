@@ -63,28 +63,27 @@ class BR():
             loadInfo: LoadData | None = self.__NewLoad()
             round["History"].append(loadInfo) if loadInfo is not None else None
             for player in self.__players:
-                state = self.__GetState()
-                self.__currentPlayer._SetState(state) if isinstance(self.__currentPlayer, Bot) else None
+                self.__currentState = self.__GetState()
+                self.__currentPlayer._SetState(self.__currentState) if isinstance(self.__currentPlayer, Bot) else None
                 self.__currentPlayer = self.__GetOpponent()
             while not self.__IsRoundOver():
                 choice:int = -1
                 while choice not in ("1","0"):
                     loadInfo: LoadData | None = self.__NewLoad()
                     round["History"].append(loadInfo) if loadInfo is not None else None
-                    state = self.__GetState()
-                    
+                    self.__currentState = self.__GetState()
                     self.__ShowInfo()
                     print("-")
-                    choice = self.__ActionMenu(state)
+                    choice = self.__ActionMenu()
                     print("-")
                     if choice in [str(item.__name__)[2] for item in self.__Items]:
                         actionData, reward = self.__UseItem(choice)
                     else:
                         impact , actionData, reward = self.__ShootSomeone(int(choice))
                     round["History"].append(actionData) if actionData is not None else None
-                    state = self.__GetState()
-                    state.update({"Action" : actionData})
-                    self.__currentPlayer._Learn(choice, reward, state) if isinstance(self.__currentPlayer, Bot) else None
+                    self.__currentState = self.__GetState()
+                    self.__currentState.update({"Action" : actionData})
+                    self.__currentPlayer._Learn(choice, reward, self.__currentState) if isinstance(self.__currentPlayer, Bot) else None
                     print(end = "-")
                     self.__Sleep(2)
 
@@ -171,10 +170,11 @@ class BR():
                     "ItemsPerLoad": randint(1,4)
                 })
         if self.__doubleOrNothing:
-            self.__Items += [
+            self.__Items = [
                 self.__Twist,
                 self.__Spike,
-                self.__8Ball
+                self.__8Ball,
+                self.__Pluck
             ]
     
     def __SaveGame(self) -> str:
@@ -185,24 +185,33 @@ class BR():
             dump(self.__gameData, json_file, indent=4)
         return filename
         
-    def __ActionMenu(self, state) -> str:
-        print(self.__currentPlayer._GetName() + "'s Turn") 
-        items = eval(str(self.__currentPlayer._GetGallery()))
-        itemsAvailable = list(set(items))
-        options: list[str] = self.__currentPlayer._GetGallery()._Options() + ["0","1"]
+    def __ActionMenu(self, plucking=False) -> str:
+        print(self.__currentPlayer._GetName() + "'s Turn") if not plucking else None
+        player = self.__currentPlayer if not plucking else self.__GetOpponent()
+        items = list(set(eval(str(player._GetGallery()))))
+        options: list[str] = player._GetGallery()._Options() + (["0","1"] if not plucking else [])
         print("Select an Action:")
-        print(f"(1) Shoot Yourself ({self.__currentPlayer._GetName()})")
-        for item in itemsAvailable:
+        print(f"(1) Shoot Yourself ({self.__currentPlayer._GetName()})") if not plucking else None
+        for item in items:
             print(f"({item[0]}) {item}")
-        print(f"(0) Shoot Opponent ({self.__GetOpponent()._GetName()})")
+        print(f"(0) Shoot Opponent ({self.__GetOpponent()._GetName()})") if not plucking else None
         while True:
             try:
-                choice:str = self.__currentPlayer._GetInput(state, options)
+                choice:str = self.__currentPlayer._GetInput(self.__currentState, options, plucking=plucking)
                 if choice not in options:
                     raise ValueError
+                if choice == "P":
+                    if plucking:
+                        raise IndexError
+                    elif self.__GetOpponent()._GetGallery()._Options() == [] or all(option == "P" for option in self.__GetOpponent()._GetGallery()._Options()):
+                        raise LookupError
                 return choice
             except ValueError:
                 logger.error(f"{choice} is not an option. Please select a valid option {str(options)}")
+            except IndexError:
+                logger.error(f"You cannot pluck a pluck when plucking. Please select another option")
+            except LookupError:
+                logger.error(f"There isn't enough items to Pluck. Please select another option")
             
     def __EnterNames(self) -> None:
         while True:
@@ -340,18 +349,29 @@ class BR():
         else:
             print("DEAD")
 
-    def __UseItem(self, choice:str) -> tuple[ItemData | None, int]:
-        item: Callable | None = self.__currentPlayer._GetGallery()._Use(choice)
+    def __Pluck(self) -> tuple[ItemData | None, int]:
+        choice = self.__ActionMenu(plucking=True)
+        print("-")
+        actionData, reward = self.__UseItem(choice, plucked=True)
+        return (actionData, reward)
+        
+    def __UseItem(self, choice:str, plucked=False) -> tuple[ItemData | None, int]:
+        player = self.__currentPlayer if not plucked else self.__GetOpponent()
+        item: Callable | None = player._GetGallery()._Use(choice)
         data = {}
         reward = 0
         if item is not None:
-            data: dict[str, str] = {
-                "Type": item.__name__[2:],
-                "Player": self.__currentPlayer._GetName()
-            }
-            logger.info(data)
-            item()
+            if item.__name__[2:] != "Pluck":
+                data: dict[str, str] = {
+                    "Type": f"{'Pluck:' if plucked else ''}{item.__name__[2:]}",
+                    "Player": self.__currentPlayer._GetName()
+                }
+                logger.info(data)
+            pluckData = item()
             reward = -1
+            if pluckData != None:
+                data = pluckData[0]
+                reward += pluckData[1]
         return (data, reward)
     
     def __ShootSomeone(self, choice:int) -> tuple[int, ShotData | None, int]:
@@ -416,7 +436,7 @@ class Player:
     def _GetWins(self) -> int:
         return self.__wins
 
-    def _GetInput(self, state={}, options=[]) -> str:
+    def _GetInput(self, state={}, options=[], plucking=False) -> str:
         return input().upper()
 
 
@@ -442,10 +462,10 @@ class Bot(Player):
                 self.__gamma = file["gamma"]
                 self.__epsilon = file["epsilon"]
 
-    def _GetInput(self, state, options) -> int:
+    def _GetInput(self, state, options, plucking=False) -> int:
         stateStr = self._GetStateStr(state)
 
-        if randint(0, 99) < self.__epsilon * 100:
+        if plucking or randint(0, 99) < self.__epsilon * 100:
             choice = choices(options)[0] # Explore
         else:
             choice = max(self.__qTable[stateStr], key=self.__qTable[stateStr].get)  # Exploit
