@@ -1,0 +1,175 @@
+@import url('https://fonts.googleapis.com/css2?family=League+Spartan:wght@100..900&display=swap');
+* {
+  margin: 0;
+  font-family: "League Spartan", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.trigger {
+  display: flex;
+  height: 100h;
+  justify-content: center;
+  align-items: center;
+  width: 70%;
+}
+
+.item {
+  width: 12%;
+  border-radius: 2vmin;
+  aspect-ratio: 5 / 7;
+  background-color: rgb(255, 255, 255, 0.1);
+  margin: 0 .25%;
+  float: left;
+  background-size: cover;
+  transition: all 0.2s ease;
+}
+.item:hover{
+  font-size: 2em;
+}
+
+.gallery:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.player-info{
+  position: fixed;
+  width: 100%;
+  z-index: 50;
+  cursor:default;
+}
+.player-info button{
+  cursor:pointer;
+}
+
+.player-info.top {
+  top: 0;
+}
+
+.player-info.bottom {
+  bottom: 0;
+}
+
+.hearts .cuffs{
+  width: 15%;
+}
+
+.player-status {
+  margin: .7% 0;
+}
+
+.player-status:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.item p{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgb(0, 0, 0, 0.7);
+}
+
+/* .item.knife {
+  background-image: url("./media/knife.png");
+}
+
+.item.glass {
+  background-image: url("./media/glass.png");
+}
+
+.item.drugs {
+  background-image: url("./media/drugs.png");
+}
+
+.item.cuffs {
+  background-image: url("./media/cuffs.png");
+}
+
+.item.voddy {
+  background-image: url("./media/voddy.png");
+}
+
+.item.twist {
+  background-image: url("./media/twist.png");
+}
+
+.item.spike {
+  background-image: url("./media/spike.png");
+}
+
+.item.ball {
+  background-image: url("./media/8ball.png");
+}
+
+.item.pluck {
+  background-image: url("./media/pluck.png");
+} */
+
+.info-box {
+  position: fixed;
+  background-color: rgba(255, 255, 255, 0.333);
+  color: black;
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 5px;
+  z-index: 100;
+  pointer-events: none; 
+}
+
+.info-box p {
+  margin: 0;
+}
+
+
+body {
+  background-color: black;
+  color: white ;
+  
+}
+
+/* Add this to your CSS file */
+.info-box {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 5px;
+  z-index: 9999;
+  animation: slideIn 0.5s ease-in-out forwards;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-50%) translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(-50%) translateX(0);
+    opacity: 1;
+  }
+}
+
+button {
+  color: white;
+  border-radius: 2px;
+  background: none;
+  border: none;
+  font-size: 2em;
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  background : rgba(255, 0, 0, 0.8);
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
