@@ -19,6 +19,7 @@ const PlayerInfo = ({opponent, playerInfo: {health, cuffed, gallery}}) => {
         "pluck": "The user will be able to steal one item from the opposing player's side and use it immediately"
       };
     const [showInfoBox, setShowInfoBox] = useState(false);
+    const [hideInfoBox, setHideInfoBox] = useState(false);
     const [infoBoxTitle, setInfoBoxTitle] = useState('');
     const [infoBoxContent, setInfoBoxContent] = useState('');
 
@@ -26,11 +27,15 @@ const PlayerInfo = ({opponent, playerInfo: {health, cuffed, gallery}}) => {
         setShowInfoBox(true);
         setInfoBoxTitle(item);
         setInfoBoxContent(items[item]);
-        
+
         setTimeout(() => {
-            setShowInfoBox(false);
-            setInfoBoxContent('');
-            setInfoBoxTitle('');
+            setHideInfoBox(true); 
+            setTimeout(() => {
+                setInfoBoxContent('');
+                setInfoBoxTitle('');
+                setShowInfoBox(false);
+                setHideInfoBox(false);
+            }, 500);
         }, 4000);
     };
 
@@ -56,13 +61,13 @@ const PlayerInfo = ({opponent, playerInfo: {health, cuffed, gallery}}) => {
                     className={`item ${item === "8ball" ? "ball" : item }`}
                     onContextMenu={(e) => { 
                         e.preventDefault();
-                        if (item != "null"){
+                        if (item !== "null"){
                             itemInfoBox(item)
                         }  
                     }} 
                     onClick={(e) => { 
                         e.preventDefault();
-                        if (item != "null" ){
+                        if (item !== "null" ){
                             if (opponent){
                                 itemInfoBox(item)
                             } else {
@@ -76,7 +81,7 @@ const PlayerInfo = ({opponent, playerInfo: {health, cuffed, gallery}}) => {
             </div>
 
             {showInfoBox && (
-                <div className="info-box">
+                <div className={`info-box ${hideInfoBox ? 'slide-out' : ''}`}>
                     <h4>{toTitleCase(infoBoxTitle)}</h4>
                     <p>{infoBoxContent}</p>
                 </div>
