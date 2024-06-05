@@ -25,7 +25,7 @@ class BR():
     def __init__(self) -> None:
         self.__name: str = ""
         self.__gameData: dict[str, dict[str, PlayerData | ModeData | list[RoundData]]] = {}
-        self.__players: list[Player] = [Player(), Player()]
+        self.__players: list[Player] = []
         self.__Items: list[Callable] = [
             self.__Knife, 
             self.__Glass, 
@@ -33,19 +33,30 @@ class BR():
             self.__Cuffs, 
             self.__Voddy  # Demo Reference
         ]
-        self.__currentPlayer: Player = self.__players[0]
         self.__currentRound: int = 0
         self.__gun: Gun = Gun()
         self.__rounds:list[RoundInfo] = []
+
+    def Connect(self, addrStr):
+        if self.__players != 2:
+            self.__players.append(Player(addrStr))
+            return True
+        return False 
+    
+    def Connections(self):
+        return len(self.__players)
+    
+    def GetPlayer(self, addrStr):
+        if addrStr == str(self.__players[0]):
+            return self.__players[0]
+        return self.__players[1]
     
     def PlayGame(self) -> dict[str, dict[str, ModeData | list[RoundData]]]:
-        print("Welcome to Buckshot Roulette")
-        print()
-        GameModeData: ModeData = self.__SelectGameMode()
-        print()
+        self.__currentPlayer: Player = self.__players[0]
+        self.__SetGameMode(2) # Auto sets the game to Double or Nothing
         self.__EnterNames()
         print(self.__name)
-        self.__gameData.update({self.__name: {"Mode": [GameModeData]}})
+        self.__gameData.update({self.__name: {"Mode": {"GameMode": "Double or Nothing"}}})
         logger.info(self.__gameData)
         self.__gameData[self.__name].update({"Game": []})
         for index, roundInfo in enumerate(self.__rounds):
@@ -99,24 +110,7 @@ class BR():
         return self.__gameData
 
     def __Sleep(self,secs):
-        sleep(secs)
-    
-    def __SelectGameMode(self) -> ModeData:
-        options: list[str] = ["Story Mode", "Double Or Nothing"]
-        print("Select game mode:")
-        for index, option in enumerate(options):
-            print(f"({str(index + 1)}) {option}")
-        while True:
-            try:
-                choice = int(self.__currentPlayer._GetInput())
-                if choice not in (2,1):
-                    raise IndexError
-                self.__SetGameMode(choice)
-                return {"Game Mode" : options[choice-1] }
-            except ValueError:
-                logger.error("Invalid input. Please enter an integer.")
-            except IndexError:
-                logger.error("Please select a valid option (1,2)")
+        pass
     
     def __SetGameMode(self, choice) -> None:
         self.__doubleOrNothing: bool = True if choice == 2 else False
@@ -365,8 +359,9 @@ class BR():
         
 
 class Player:
-    def __init__(self) -> None:
+    def __init__(self, addrStr) -> None:
         self._name: str = ""
+        self._addrSr: str = addrStr
         self.__health: int = 0
         self.__gallery: Gallery = Gallery()
         self.__cuffed: bool = False
@@ -409,6 +404,8 @@ class Player:
     def _GetInput(self) -> str:
         return input().upper()
 
+    def __str__(self) -> str:
+        return self._addrSr
 
 class Gun:
     def __init__(self) -> None:
