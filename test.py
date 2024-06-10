@@ -21,17 +21,13 @@ def receive(buffer=HEADER):
     return client.recv(buffer).decode(FORMAT)
 
 def listening():
-    msg = receive()
-    if msg:
-        try:
-            msg = receive(int(msg))
-        except:
-            pass
-    print("Server:", msg)
+    while True:
+        msg = receive()
+        print("Server:", str(msg).rstrip(' '))
 
 connected = True
+threading.Thread(target=listening, daemon=True).start()
 while connected:
-    threading.Thread(target=listening, daemon=True).start()
     msg = input("")
     send(msg)
     if msg == DISCONNECTMSG:
