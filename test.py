@@ -23,7 +23,7 @@ def receive(buffer=HEADER):
 def listening():
     while True:
         msg = receive()
-        print("Server:", str(msg).rstrip(' '))
+        print(f"{SERVER}::{PORT} $ Server - ", str(msg).rstrip(' '))
 
 connected = True
 threading.Thread(target=listening, daemon=True).start()

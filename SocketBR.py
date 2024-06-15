@@ -160,8 +160,11 @@ class SocketBR():
         for player in self.__players:
             items: int = self.__currentRound.GetItemsPerLoad()
             while items > 0 and not player._GetGallery()._IsFull():
-                # If Round Health == 2, no Knifes
-                player._GetGallery()._Add(choices(self.__items)[0])
+                item = None
+                while item == None or (self.__currentRound.GetMaxHealth() == 2 and item.__name__[2:] == "Knife"):
+                    # If Round Health == 2, no Knifes
+                    item = choices(self.__items)[0]
+                player._GetGallery()._Add(item)
                 items -= 1
         self.__SendToPlayersConcurrently(lambda player: player.SendMessage("Gun Reloaded"))
     
@@ -485,11 +488,12 @@ class Gallery():
 class DualOutput:
     def __init__(self, filename):
         self.__terminal = sys.stdout
-        self.__log = open(filename, "w")
+        self.__log = open(filename, "w", buffering=1)  # Line buffered
 
     def write(self, message):
         self.__terminal.write(message)
         self.__log.write(message)
+        self.__log.flush()  # Ensure flushing after each write
 
     def flush(self):
         self.__terminal.flush()
