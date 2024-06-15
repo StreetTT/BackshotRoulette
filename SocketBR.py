@@ -109,6 +109,7 @@ class SocketBR():
             print(f"Round {index + 1}" + "\n----")
             self.__StartRound()
             while not self.__IsRoundOver():
+                self.__Reload()
                 print("---")
                 for player in self.__players:
                     print(player.Info())
@@ -118,7 +119,10 @@ class SocketBR():
                 if choice in [str(item.__name__)[2] for item in self.__items]:
                     self.__UseItem(choice)
                 else:
-                    pass # impact = self.__ShootSomeone(int(choice))
+                    impact = self.__ShootSomeone(int(choice))
+                if choice in ("1","0") and (impact != 0 or choice == "0"):
+                    self.__NextTurn()
+            self.__EndTurn()
 
     def __SetName(self, player: "Player"): # Request the name of each player
         player.SendMessage("!!RQ")  
@@ -133,15 +137,11 @@ class SocketBR():
             self.__rounds = [Round(i+2,i) for i in range(0,6,2)]
         else:
             self.__rounds = [Round(randint(2,4),randint(1,4)) for _ in range(3)]
-            # self.__items += [
-            #     self.__Twist,
-            #     self.__Spike,
-            #     self.__8Ball,
-            #     self.__Pluck
-            # ]
-            self.__items = [
-                self.__Knife,
-                self.__Glass
+            self.__items += [
+                self.__Twist,
+                self.__Spike,
+                self.__8Ball,
+                self.__Pluck
             ]
     
     def __StartRound(self) -> None:
@@ -163,6 +163,7 @@ class SocketBR():
                 # If Round Health == 2, no Knifes
                 player._GetGallery()._Add(choices(self.__items)[0])
                 items -= 1
+        self.__SendToPlayersConcurrently(lambda player: player.SendMessage("Gun Reloaded"))
     
     def __IsRoundOver(self) -> bool:
         roundOver: bool = self.__GetOpponent()._GetHealth() == 0 or self.__currentPlayer._GetHealth() == 0
@@ -172,6 +173,7 @@ class SocketBR():
             self.__GetOpponent()._AddWin()
         if roundOver:
             self.__gun._Empty()
+            print("---")
         return roundOver
 
     def __GetOpponent(self, p=None) -> "Player":
@@ -211,90 +213,99 @@ class SocketBR():
     
     def __TakeAction(self, plucking=False):
         player = self.__currentPlayer if not plucking else self.__GetOpponent()
-        options: list[str] = player._GetGallery()._Options() + (["0","1"] if not plucking else [])
+        options: list[str] = player._GetGallery()._Options() + (["0", "1"] if not plucking else [])
         while True:
             try:
-                choice:str = self.__RQRESProtocol(player)
+                choice:str = self.__RQRESProtocol(self.__currentPlayer).upper()
                 if choice not in options:
                     raise ValueError
-                if choice == "P":
-                    if plucking:
-                        raise IndexError
-                    elif self.__GetOpponent()._GetGallery()._Options() == [] or all(option == "P" for option in self.__GetOpponent()._GetGallery()._Options()):
+                if plucking:
+                    if not self.__GetOpponent()._GetGallery()._Options() or all(option == "P" for option in self.__GetOpponent()._GetGallery()._Options()):
                         raise LookupError
+                    elif choice == "P":
+                        raise IndexError
                 return choice
-            except ValueError:
-                print(f"{choice} is not an option. Please select a valid option {str(options)}")
-            except IndexError:
-                print(f"You cannot pluck a pluck when plucking. Please select another option")
-            except LookupError:
-                print(f"There isn't enough items to Pluck. Please select another option")
+            except ValueError as e:
+                announcement = f"{choice} is not an option. Please select a valid option {str(options)}"
+            except IndexError as e:
+                announcement = f"You cannot pluck a pluck when plucking. Please select another option"
+            except LookupError as e:
+                announcement = f"There isn't enough items to Pluck. Please select another option"
+    
+            if 'announcement' in locals():
+                announcementMethod = lambda player, message=announcement: player.SendMessage(message)
+                self.__RQRESProtocol(self.__currentPlayer, announcementMethod)
+                print(announcement)
 
     def __UseItem(self, choice:str, plucked=False):
         player: Player = self.__currentPlayer if not plucked else self.__GetOpponent()
         item: Callable | None = player._GetGallery()._Use(choice)
         if item is not None:
-            if item.__name__[2:] != "Pluck":
-                pass
-            announcement = item()
-            print(announcement)
-            announcementMethod = lambda player: player.SendMessage(announcement)
-            if choice in ['G', '8']:
-                self.__RQRESProtocol(self.__currentPlayer,announcementMethod)
+            if choice in ['P']:
+                item()
             else:
-                self.__SendToPlayersConcurrently(announcementMethod)
+                announcement = f"{'PLUCKED\n\t' if plucked else ''}{item()}"
+                if announcement:
+                    print(announcement)
+                    announcementMethod = lambda player: player.SendMessage(announcement)
+                    if choice in ['G', '8']:
+                        self.__RQRESProtocol(self.__currentPlayer, announcementMethod)
+                    else:
+                        self.__SendToPlayersConcurrently(announcementMethod)
+    
+    def __ShootSomeone(self, choice:int):
+        impact:int = self.__gun._Shoot()
+        player: Player = self.__currentPlayer if choice == 1 else self.__GetOpponent()
+        player._ModifyHealth(-impact, self.__currentRound.GetMaxHealth())
+        announcement = f"{self.__currentPlayer.GetName()} shot {player.GetName()} with a {'LIVE' if impact else 'DEAD'}"
+        print(announcement)
+        announcementMethod = lambda player: player.SendMessage(announcement)
+        self.__SendToPlayersConcurrently(announcementMethod)
+        return impact
 
-    def __Knife(self) -> None:
+    def __Knife(self):
         self.__gun._SetCrit(True)   
-        announcement = "Gun = Crit"
-        return announcement
+        return "Gun = Crit"
         
-    def __Glass(self) -> None:
-        announcement = "Top Bullet = "
-        if self.__gun._Peek():
-            announcement += "LIVE"
-        else:
-            announcement += "DEAD"
-        return announcement
+    def __Glass(self):
+        return f"Peek Bullet = {'LIVE' if self.__gun._Peek() else 'DEAD'}"
 
-    def __Drugs(self) -> None:
-        self.__currentPlayer._ModifyHealth(1, self.__rounds[self.__currentRound]['MaxHealth'])
-        print(self.__currentPlayer._GetName() + "'s health = " + str(self.__currentPlayer._GetHealth()))
+    def __Drugs(self):
+        self.__currentPlayer._ModifyHealth(1, self.__currentRound.GetMaxHealth())
+        return f"{self.__currentPlayer.GetName()}'s health = {str(self.__currentPlayer._GetHealth())}"
 
-    def __Cuffs(self) -> None:
+    def __Cuffs(self):
         self.__GetOpponent()._SetCuffed(True)
-        print(self.__GetOpponent()._GetName() + " has been handcuffed")
+        return f"{self.__GetOpponent().GetName()} cuffed = True"
 
-    def __Voddy(self) -> None:
-        print("The bullet was", end=": ")
-        if self.__gun._Rack():
-            print("LIVE")
-        else:
-            print("DEAD")
+    def __Voddy(self):
+        return f"Rack Bullet = {'LIVE' if self.__gun._Rack() else 'DEAD'}"
     
-    def __Twist(self) -> None:
-        print("The bullet has been Twisted")
+    def __Twist(self):
         self.__gun._Twist()
+        return "Twisted Top Bullet"
     
-    def __Spike(self) -> None:
+    def __Spike(self):
         spike = 2 if randint(0, 99) < 40 else -1
-        self.__currentPlayer._ModifyHealth(spike, self.__rounds[self.__currentRound]['MaxHealth'])
-        print(self.__currentPlayer._GetName() + "'s health = " + str(self.__currentPlayer._GetHealth()))
+        self.__currentPlayer._ModifyHealth(spike, self.__currentRound.GetMaxHealth())
+        return f"{self.__currentPlayer.GetName()}'s health = {str(self.__currentPlayer._GetHealth())}"
     
-    def __8Ball(self) -> None:
+    def __8Ball(self):
         bullet = self.__gun._RandPeek()
-        print(f"Bullet {bullet[0]} is", end=": ")
-        if bullet[1]:
-            print("LIVE")
-        else:
-            print("DEAD")
+        return f"Peek Bullet {bullet[0]} = {'LIVE' if bullet[1] else 'DEAD'}"
 
     def __Pluck(self):
-        return  # Function body to be implemented
-        choice = self.__ActionMenu(plucking=True)
-        print("-")
-        actionData, reward = self.__UseItem(choice, plucked=True)
-        return (actionData, reward)
+        choice = self.__TakeAction(plucking=True)
+        self.__UseItem(choice, plucked=True)
+
+    def __NextTurn(self) -> None:
+        if not self.__GetOpponent()._IsCuffed():
+            self.__currentPlayer = self.__GetOpponent()
+
+    def __EndTurn(self) -> None:
+        self.__gun._SetCrit(False)
+        if self.__GetOpponent()._IsCuffed():
+            self.__GetOpponent()._SetCuffed(False)
 
 
 class Player(BRProtocol):
@@ -304,6 +315,7 @@ class Player(BRProtocol):
         self.__name = None
         self.__health = 0
         self.__wins = 0
+        self.__cuffed = False
         self.__gallery: Gallery = Gallery()
     
     def SetName(self, name):
@@ -333,9 +345,23 @@ class Player(BRProtocol):
         d.update({"wins": self.__wins})
         d.update({"gallery": str(self.__gallery)})
         d.update({"health": self.__health})
+        d.update({"cuffed": self.__cuffed})
         return d
 
+    def _ModifyHealth(self, health, maxHealth) -> None:
+        self.__health += health
+        if self.__health >  maxHealth:
+            self.__health = maxHealth
+        elif self.__health < 0:
+            self.__health = 0
 
+    def _SetCuffed(self, cuffed:bool) -> None:
+        self.__cuffed = cuffed
+
+    def _IsCuffed(self) -> bool:
+        return self.__cuffed
+    
+    
 class Round():
     def __init__(self, maxHealth:int, itemsPerLoad:int) -> None:
         self.__maxHealth = maxHealth
@@ -406,6 +432,22 @@ class Gun:
 
     def _Peek(self) -> bool:
         return self.__chamber[0]
+
+    def _Rack(self) -> bool:
+        return self.__chamber.pop(0)
+    
+    def _Twist(self):
+        self.__chamber[0] = not self.__chamber[0]
+    
+    def _RandPeek(self) -> tuple[int, bool]:
+        bullet = randint(0, len(self.__chamber) - 1)
+        return (bullet + 1, self.__chamber[bullet])
+
+    def _Shoot(self) -> int:
+        impact: int = 2 if self.__crit else 1
+        if self.__chamber.pop(0):
+            return impact
+        return 0
 
 class Gallery():
     def __init__(self) -> None:
