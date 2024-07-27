@@ -26,7 +26,7 @@ class Router():
     def Start(self):
         print("Server is Starting...")
         self.__server.listen()
-        print(f"Listening on {self.__serverName}")
+        print(f"[{self.__serverName}::5050]")
         while True:
             conn, addr = self.__server.accept()
             player = Player(conn, addr)
@@ -42,7 +42,7 @@ class Router():
                     break
         if not connected:
             while not connected:
-                code = str(choices(ascii_uppercase, k=4)) 
+                code = "".join(choices(ascii_uppercase, k=4)) 
                 if not code in self.__games:
                     self.__games[code] = SocketBR(code)
                     connected = self.__games[code].Connect(player)
@@ -60,7 +60,7 @@ class BRProtocol():
         send_length += b' ' * (1024 - len(send_length))
         self._connection.send(send_length)
         self._connection.send(msg)
-        sleep(0.1)
+        sleep(0.2)
     
     def ReceiveMessage(self):
         msg_length = self._connection.recv(1024).decode("utf-8")
@@ -176,7 +176,8 @@ class SocketBR():
             self.__GetOpponent()._AddWin()
         if roundOver:
             self.__gun._Empty()
-            print("---")
+            print("---\nRound Over")
+            self.__SendToPlayersConcurrently(lambda player: player.SendMessage("ROUND OVER"))
         return roundOver
 
     def __GetOpponent(self, p=None) -> "Player":

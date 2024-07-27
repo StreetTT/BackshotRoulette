@@ -25,7 +25,7 @@ class BR():
     def __init__(self) -> None:
         self.__name: str = ""
         self.__gameData: dict[str, dict[str, PlayerData | ModeData | list[RoundData]]] = {}
-        self.__players: list[Player] = []
+        self.__players: list[Player] = [Player("addrStr"),Player("addrStr")]
         self.__Items: list[Callable] = [
             self.__Knife, 
             self.__Glass, 
@@ -136,7 +136,7 @@ class BR():
                     "ItemsPerLoad": randint(1,4)
                 })
         if self.__doubleOrNothing:
-            self.__Items = [
+            self.__Items += [
                 self.__Twist,
                 self.__Spike,
                 self.__8Ball,

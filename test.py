@@ -25,8 +25,10 @@ def listening():
         msg = receive()
         print(f"{SERVER}::{PORT} $ Server - ", str(msg).rstrip(' '))
 
+print("Cilent is Starting...")
 connected = True
 threading.Thread(target=listening, daemon=True).start()
+print(f"[{SERVER}::{PORT}]")
 while connected:
     msg = input("")
     send(msg)
