@@ -1,0 +1,266 @@
+@import url('https://fonts.googleapis.com/css2?family=League+Spartan:wght@100..900&display=swap');
+* {
+  margin: 0;
+  font-family: "League Spartan", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.trigger {
+  display: flex;
+  height: 100h;
+  justify-content: center;
+  align-items: center;
+  width: 70%;
+}
+
+.item {
+  width: 12%;
+  border-radius: 2vmin;
+  aspect-ratio: 5 / 7;
+  background-color: rgb(255, 255, 255, 0.1);
+  margin: 0 .25%;
+  float: left;
+  background-size: cover;
+  transition: all 0.2s ease;
+}
+.item:hover{
+  font-size: 2em;
+}
+
+.gallery:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.player-info{
+  position: fixed;
+  width: 100%;
+  z-index: 50;
+  cursor:default;
+}
+.player-info button{
+  cursor:pointer;
+}
+
+.player-info.top {
+  top: 0;
+}
+
+.player-info.bottom {
+  bottom: 0;
+}
+
+.hearts .cuffs{
+  width: 15%;
+}
+
+.player-status {
+  margin: .7% 0;
+}
+
+.player-status:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.item p{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgb(0, 0, 0, 0.7);
+}
+
+/* .item.knife {
+  background-image: url("./media/knife.png");
+}
+
+.item.glass {
+  background-image: url("./media/glass.png");
+}
+
+.item.drugs {
+  background-image: url("./media/drugs.png");
+}
+
+.item.cuffs {
+  background-image: url("./media/cuffs.png");
+}
+
+.item.voddy {
+  background-image: url("./media/voddy.png");
+}
+
+.item.twist {
+  background-image: url("./media/twist.png");
+}
+
+.item.spike {
+  background-image: url("./media/spike.png");
+}
+
+.item.ball {
+  background-image: url("./media/8ball.png");
+}
+
+.item.pluck {
+  background-image: url("./media/pluck.png");
+} */
+
+.info-box {
+  position: fixed;
+  background-color: rgba(255, 255, 255, 0.333);
+  color: black;
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 5px;
+  z-index: 100;
+  pointer-events: none; 
+}
+
+.info-box p {
+  margin: 0;
+}
+
+
+body {
+  background-color: black;
+  color: white ;
+  
+}
+
+/* Add this to your CSS file */
+.info-box {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 5px;
+  z-index: 9999;
+  animation: infoSlideIn 0.5s ease-in-out forwards;
+}
+
+.info-box.slide-out {
+  animation: infoSlideOut 0.5s ease-in-out forwards;
+}
+
+@keyframes infoSlideIn {
+  from {
+    transform: translateY(-50%) translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(-50%) translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes infoSlideOut {
+  from {
+    transform: translateY(-50%) translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-50%) translateX(100%);
+    opacity: 0;
+  }
+}
+
+button {
+  color: white;
+  border-radius: 2px;
+  background: none;
+  border: none;
+  font-size: 2em;
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  background : rgba(255, 0, 0, 0.8);
+}
+
+.gun {
+  position: fixed;
+  top: 50%;
+  left: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  border: 4px solid #ccc;
+  padding: 10px;
+  border-radius: 5px;
+  z-index: 9999;
+  transition: transform 0.5s ease-in-out;
+  cursor: default;
+}
+
+.gun.show {
+  transform: translateY(-50%) translateX(0);
+}
+
+.gun.poke {
+  transform: translateY(-50%) translateX(-90%);
+}
+
+.gun.hide {
+  transform: translateY(-50%) translateX(-100%);
+}
+
+
+.gun h4 {
+  background-color: rgba(0, 0, 0, 0.8);
+  padding: 0 10px ;
+  transform: rotate(90deg) translateX(-100%);
+  transform-origin: bottom left;
+  position: absolute;
+  bottom: 0;
+  left: 100%;
+  margin-left: 20px; /* Adjust based on desired spacing from the box */
+}
+
+.gun span{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2em;
+}
+
+.bullet {
+  width: 10%;
+  border-radius: 1vmin;
+  aspect-ratio: 1 / 1;
+  margin: 2% 1%;
+  float: left;
+  border-width: 1.5px; 
+  border-color: white;
+  border-style: solid;
+}
+
+.bullet.live {
+  background-color: rgb(255, 0, 0, 1);
+}
+
+.bullet.dead {
+  background-color: rgb(255, 0, 0, .1);
+}
+
+.bullets:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.gun span.crit {
+  font-weight: bold;
+  text-decoration: underline;
+  font-size: 1.4em;
+  color: red;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}

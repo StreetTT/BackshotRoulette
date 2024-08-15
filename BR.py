@@ -22,11 +22,10 @@ RoundData =  dict[str, list[ItemData | LoadData | ShotData ] | RoundInfo]
 
 
 class BR():
-    def __init__(self, sim: bool = False) -> None:
+    def __init__(self) -> None:
         self.__name: str = ""
-        self.__sim = sim
         self.__gameData: dict[str, dict[str, PlayerData | ModeData | list[RoundData]]] = {}
-        self.__players: list[Player] = [Bot() if sim else Player()]
+        self.__players: list[Player] = [Player("addrStr"),Player("addrStr")]
         self.__Items: list[Callable] = [
             self.__Knife, 
             self.__Glass, 
@@ -34,21 +33,30 @@ class BR():
             self.__Cuffs, 
             self.__Voddy  # Demo Reference
         ]
-        self.__currentPlayer: Player = self.__players[0]
         self.__currentRound: int = 0
         self.__gun: Gun = Gun()
         self.__rounds:list[RoundInfo] = []
+
+    def Connect(self, addrStr):
+        if self.__players != 2:
+            self.__players.append(Player(addrStr))
+            return True
+        return False 
+    
+    def Connections(self):
+        return len(self.__players)
+    
+    def GetPlayer(self, addrStr):
+        if addrStr == str(self.__players[0]):
+            return self.__players[0]
+        return self.__players[1]
     
     def PlayGame(self) -> dict[str, dict[str, ModeData | list[RoundData]]]:
-        print("Welcome to Buckshot Roulette")
-        print()
-        PlayModeData: ModeData = self.__SelectPlayMode()
-        print()
-        GameModeData: ModeData = self.__SelectGameMode()
-        print()
+        self.__currentPlayer: Player = self.__players[0]
+        self.__SetGameMode(2) # Auto sets the game to Double or Nothing
         self.__EnterNames()
         print(self.__name)
-        self.__gameData.update({self.__name: {"Mode": [PlayModeData, GameModeData]}})
+        self.__gameData.update({self.__name: {"Mode": {"GameMode": "Double or Nothing"}}})
         logger.info(self.__gameData)
         self.__gameData[self.__name].update({"Game": []})
         for index, roundInfo in enumerate(self.__rounds):
@@ -64,35 +72,33 @@ class BR():
             round["History"].append(loadInfo) if loadInfo is not None else None
             for player in self.__players:
                 self.__currentState = self.__GetState()
-                self.__currentPlayer._SetState(self.__currentState) if isinstance(self.__currentPlayer, Bot) else None
                 self.__currentPlayer = self.__GetOpponent()
             while not self.__IsRoundOver():
                 choice:int = -1
-                while choice not in ("1","0"):
-                    loadInfo: LoadData | None = self.__NewLoad()
-                    round["History"].append(loadInfo) if loadInfo is not None else None
-                    self.__currentState = self.__GetState()
-                    self.__ShowInfo()
-                    print("-")
-                    choice = self.__ActionMenu()
-                    print("-")
-                    if choice in [str(item.__name__)[2] for item in self.__Items]:
-                        actionData, reward = self.__UseItem(choice)
-                    else:
-                        impact , actionData, reward = self.__ShootSomeone(int(choice))
-                    round["History"].append(actionData) if actionData is not None else None
-                    self.__currentState = self.__GetState()
-                    self.__currentState.update({"Action" : actionData})
-                    self.__currentPlayer._Learn(choice, reward, self.__currentState) if isinstance(self.__currentPlayer, Bot) else None
-                    print(end = "-")
-                    self.__Sleep(2)
+                loadInfo: LoadData | None = self.__NewLoad()
+                round["History"].append(loadInfo) if loadInfo is not None else None
+                self.__currentState = self.__GetState()
+                self.__ShowInfo()
+                print("-")
+                choice = self.__ActionMenu()
+                print("-")
+                if choice in [str(item.__name__)[2] for item in self.__Items]:
+                    actionData, reward = self.__UseItem(choice)
+                else:
+                    impact , actionData, reward = self.__ShootSomeone(int(choice))
+                round["History"].append(actionData) if actionData is not None else None
+                self.__currentState = self.__GetState()
+                self.__currentState.update({"Action" : actionData})
+                print(end = "-")
+                self.__Sleep(2)
 
                 # If player shoots themselves with a blank, they get a second turn
-                if impact != 0 or choice != "1":
-                    print("-")
-                    self.__NextTurn()
-                else:
-                    print(" ")
+                if choice in ("1","0"):
+                    if impact != 0 or choice != "1":
+                        print("-")
+                        self.__NextTurn()
+                    else:
+                        print(" ")
                 
                 # Uncuff players and Uncrit gun
                 self.__EndTurn()
@@ -100,51 +106,11 @@ class BR():
         self.__gameData[self.__name].update({"Players": {}})
         for player in self.__players:
             self.__gameData[self.__name]["Players"].update({player._GetName() : player._GetWins()})
-            if isinstance(player, Bot):
-                player._SaveBot()
         logger.info("Game Saved under '" + self.__SaveGame() + "'")
         return self.__gameData
 
     def __Sleep(self,secs):
-        if not self.__sim:
-            sleep(secs)
-
-    def __SelectPlayMode(self) -> ModeData:
-        options: list[str] = ["Player vs. Player", "Player vs. Bot"]
-        print("Select play mode:")
-        for index, option in enumerate(options):
-            print(f"({str(index + 1)}) {option}")
-        while True:
-            try:
-                choice = int((2) if isinstance(self.__players[0], Bot) else (self.__currentPlayer._GetInput({})))
-                if choice not in (2,1):
-                    raise IndexError
-                if choice == 1:
-                    self.__players.append(Player())
-                else:
-                    self.__players.append(Bot())
-                return {"Play Mode" : ("Bot vs. Bot") if isinstance(self.__players[0], Bot) else (options[choice-1]) }
-            except ValueError:
-                logger.error("Invalid input. Please enter an integer.")
-            except IndexError:
-                logger.error("Please select a valid option (1,2)")
-    
-    def __SelectGameMode(self) -> ModeData:
-        options: list[str] = ["Story Mode", "Double Or Nothing"]
-        print("Select game mode:")
-        for index, option in enumerate(options):
-            print(f"({str(index + 1)}) {option}")
-        while True:
-            try:
-                choice = int((2) if isinstance(self.__players[0], Bot) else (self.__currentPlayer._GetInput({})))
-                if choice not in (2,1):
-                    raise IndexError
-                self.__SetGameMode(choice)
-                return {"Game Mode" : options[choice-1] }
-            except ValueError:
-                logger.error("Invalid input. Please enter an integer.")
-            except IndexError:
-                logger.error("Please select a valid option (1,2)")
+        pass
     
     def __SetGameMode(self, choice) -> None:
         self.__doubleOrNothing: bool = True if choice == 2 else False
@@ -170,7 +136,7 @@ class BR():
                     "ItemsPerLoad": randint(1,4)
                 })
         if self.__doubleOrNothing:
-            self.__Items = [
+            self.__Items += [
                 self.__Twist,
                 self.__Spike,
                 self.__8Ball,
@@ -197,7 +163,7 @@ class BR():
         print(f"(0) Shoot Opponent ({self.__GetOpponent()._GetName()})") if not plucking else None
         while True:
             try:
-                choice:str = self.__currentPlayer._GetInput(self.__currentState, options, plucking=plucking)
+                choice:str = self.__currentPlayer._GetInput()
                 if choice not in options:
                     raise ValueError
                 if choice == "P":
@@ -216,9 +182,7 @@ class BR():
     def __EnterNames(self) -> None:
         while True:
             for index, player in enumerate(self.__players):
-                player._SetName(
-                    ("") if isinstance(player, Bot) else (input(f"Enter Player {index+1}'s Name: "))
-                )
+                player._SetName(input(f"Enter Player {index+1}'s Name: "))
             if self.__players[0]._GetName() != self.__players[1]._GetName():
                 self.__name: str = f"{self.__players[0]._GetName()} vs. {self.__players[1]._GetName()}"
                 return
@@ -395,8 +359,9 @@ class BR():
         
 
 class Player:
-    def __init__(self) -> None:
+    def __init__(self, addrStr) -> None:
         self._name: str = ""
+        self._addrSr: str = addrStr
         self.__health: int = 0
         self.__gallery: Gallery = Gallery()
         self.__cuffed: bool = False
@@ -436,89 +401,11 @@ class Player:
     def _GetWins(self) -> int:
         return self.__wins
 
-    def _GetInput(self, state={}, options=[], plucking=False) -> str:
+    def _GetInput(self) -> str:
         return input().upper()
 
-
-class Bot(Player):
-    def __init__(self) -> None:
-        super().__init__()
-        self.__qTable = {}
-        self.__alpha = 0.1 # How much like Mahoraga his he (learning rate/ adaptability)
-        self.__gamma = 0.95 # How ungreedy are they (how much they value future reward)
-        self.__epsilon = 0.1 # How often does he fuck around and find out (randomness)
-        self.__oldStateStr = None
-    
-    def _SetName(self, name:str="") -> None:
-        super()._SetName(choices(["Kai", "Zane", "Cole", "Jay", "Lloyd"])[0])
-        if not path.exists('bots'):
-            makedirs('bots')
-        filename: str = f'bots/{self._name}.json'
-        if path.exists(filename):
-            with open(filename, 'r') as json_file:
-                file = load(json_file)
-                self.__qTable = file["qTable"]
-                self.__alpha = file["alpha"]
-                self.__gamma = file["gamma"]
-                self.__epsilon = file["epsilon"]
-
-    def _GetInput(self, state, options, plucking=False) -> int:
-        stateStr = self._GetStateStr(state)
-
-        if plucking or randint(0, 99) < self.__epsilon * 100:
-            choice = choices(options)[0] # Explore
-        else:
-            choice = max(self.__qTable[stateStr], key=self.__qTable[stateStr].get)  # Exploit
-        print(str(choice))
-        return choice
-
-    def _AddToStateSpace(self, stateStr, options) -> None:
-        self.__qTable.update({stateStr : {action: 0.0 for action in options}})
-
-    def _GetStateStr(self, state:dict) -> str:
-        if "Action" in state.keys():
-            if state['Action']['Type'] == "Shot":
-                state['Action']['Shooter'] = "Player" if state['Action']['Shooter'] == self._name else "Opponent"
-                state['Action']['Victim'] = "Player" if state['Action']['Victim'] == self._name else "Opponent"
-            else:
-                state['Action']['Player'] = "Player" if state['Action']['Player'] == self._name else "Opponent"
-        stateStr = dumps(state, sort_keys=True)
-        options = [item[0] for item in state['Player']['Items']] + ['0', '1']
-        if stateStr not in self.__qTable:
-            self._AddToStateSpace(stateStr, options)
-        return stateStr 
-
-    def _Learn(self, action, reward, newState) -> None:
-        new_state_str = self._GetStateStr(newState)
-
-        # Ensure action is valid for the state before updating Q-values
-        if action in self.__qTable[self.__oldStateStr]:
-            max_future_q = max(self.__qTable[new_state_str].values(), default=0)
-            old_q = self.__qTable[self.__oldStateStr][action]
-            new_q = (1 - self.__alpha)* old_q + self.__alpha * (reward + self.__gamma * max_future_q)
-            self.__qTable[self.__oldStateStr][action] = new_q
-        else:
-            # If the action does not exist in the current state, ignore or log this learning attempt
-            # This can be replaced or enhanced with logging if needed
-            logger.warning(f"Action {action} was not valid for the current state and was skipped in learning.")
-        
-        self.__oldStateStr = self._GetStateStr(newState)  # Update the old state to the new state
-    
-    def _SaveBot(self) -> None:
-        if not path.exists('bots'):
-            makedirs('bots')
-        filename: str = f'bots/{self._name}.json'
-        bot = {
-            "alpha" : self.__alpha,
-            "gamma" : self.__gamma,
-            "epsilon" : self.__epsilon,
-            "qTable": self.__qTable
-        }
-        with open(filename, 'w') as json_file:
-            dump(bot, json_file, indent=4)
-    
-    def _SetState(self, state:dict) -> None:
-        self.__oldStateStr = self._GetStateStr(state)
+    def __str__(self) -> str:
+        return self._addrSr
 
 class Gun:
     def __init__(self) -> None:
