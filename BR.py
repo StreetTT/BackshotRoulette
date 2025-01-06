@@ -37,9 +37,13 @@ class BR():
         self.__currentRound: int = 0
         self.__gun: Gun = Gun()
         self.__rounds:list[RoundInfo] = []
+        self.__delayMultiplier: int = 1
     
     def PlayGame(self) -> dict[str, dict[str, ModeData | list[RoundData]]]:
         print("Welcome to Buckshot Roulette")
+        print()
+        while self.__WelcomeMenu() != 1:
+            pass
         print()
         GameModeData: ModeData = self.__SelectGameMode()
         print()
@@ -81,13 +85,13 @@ class BR():
                 print(end = "-")
                 self.__Sleep(2)
 
-                # If player shoots themselves with a blank, they get a second turn
+                # If player shoots themselves with a blank, they get another  turn
                 if choice in ("1","0"):
-                    if impact != 0 or choice != "1":
+                    if choice == "1" and impact == 0:
+                        print(" ")
+                    else:
                         print("-")
                         self.__NextTurn()
-                    else:
-                        print(" ")
                 
                 # Uncuff players and Uncrit gun
                 self.__EndTurn()
@@ -100,6 +104,64 @@ class BR():
 
     def __Sleep(self,secs):
         sleep(secs)
+
+    def __WelcomeMenu(self) -> None:
+        options: list[str] = ["Play", "How to Play", "Change Delay", "Exit"]
+        for index, option in enumerate(options):
+            print(f"({str(index + 1)}) {option}")
+        try:
+            choice = int(self.__currentPlayer._GetInput())
+            print()
+            if choice not in (1,2,3,4):
+                raise IndexError
+            if choice == 4:
+                print("Thank you for playing Buckshot Roulette!\nExiting in:", end=" ")
+                for i in range(5,0,-1):
+                    print(i, end=" ")
+                    sleep(1)
+                exit(0)
+            elif choice == 2:
+                self.__HowToPlay()
+            elif choice == 3:
+                self.__ChangeDelay()
+            return choice
+        except ValueError:
+            logger.warning("Invalid input. Please enter an integer.")
+        except IndexError:
+            logger.warning("Please select a valid option (1,2,3,4)")
+
+    def __HowToPlay(self) -> None:
+        print("How to Play:")
+        print("Each round, players will be given a set amount of health and items.")
+        print("Players will take turns shooting each other or themselves with a gun that has a mix of live and dead bullets in a random order.")  
+        print("If a player shoots themselves with a dead bullet, they get another turn.")
+        print("Players can use items to change the outcome of the game.")
+        print("Items include:")
+        print("1. Knife: Makes the gun deal double damage for the next shot.")
+        print("2. Glass: Shows whether the next bullet is live or dead.")
+        print("3. Drugs: Heals the player using the item by 1 heart.")
+        print("4. Cuffs: Prevents the opponent from shooting for the next turn.")
+        print("5. Voddy: Shows whether the next bullet is live or dead.")
+        print("6. Twist: Flips the next bullet in the gun.")
+        print("7. Spike: Either heals the player using the item by 2 heart or damages them by 1 heart.")
+        print("8. 8Ball: Shows whether a random bullet is live or dead.")
+        print("9. Pluck: Steals an item from the opponent.")
+        print("The game ends when one player loses all their health.")
+        print("The player with the most wins at the end of the game wins.")
+        input("Press Enter to continue")
+        print()
+    
+    def __ChangeDelay(self) -> None:
+        print("Current Delay Multiplier: " + str(self.__delayMultiplier))
+        while True:
+            try:
+                choice = int(self.__currentPlayer._GetInput())
+                if choice < 0:
+                    raise ValueError
+                self.__delayMultiplier = choice
+                return
+            except ValueError:
+                logger.warning("Invalid input. Please enter an integer greater than or equal to 0.")
     
     def __SelectGameMode(self) -> ModeData:
         options: list[str] = ["Story Mode", "Double Or Nothing"]
@@ -114,9 +176,9 @@ class BR():
                 self.__SetGameMode(choice)
                 return {"Game Mode" : options[choice-1] }
             except ValueError:
-                logger.error("Invalid input. Please enter an integer.")
+                logger.warning("Invalid input. Please enter an integer.")
             except IndexError:
-                logger.error("Please select a valid option (1,2)")
+                logger.warning("Please select a valid option (1,2)")
     
     def __SetGameMode(self, choice) -> None:
         self.__doubleOrNothing: bool = True if choice == 2 else False
@@ -179,11 +241,11 @@ class BR():
                         raise LookupError
                 return choice
             except ValueError:
-                logger.error(f"{choice} is not an option. Please select a valid option {str(options)}")
+                logger.warning(f"{choice} is not an option. Please select a valid option {str(options)}")
             except IndexError:
-                logger.error(f"You cannot pluck a pluck when plucking. Please select another option")
+                logger.warning(f"You cannot pluck a pluck when plucking. Please select another option")
             except LookupError:
-                logger.error(f"There isn't enough items to Pluck. Please select another option")
+                logger.warning(f"There isn't enough items to Pluck. Please select another option")
             
     def __EnterNames(self) -> None:
         while True:

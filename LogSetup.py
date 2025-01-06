@@ -1,4 +1,4 @@
-from logging import Logger, Formatter, FileHandler, StreamHandler, getLogger, DEBUG, ERROR
+from logging import Logger, Formatter, FileHandler, StreamHandler, getLogger, DEBUG, ERROR, WARNING
 from sys import stdout
 
 def CreateLogger(name:str) -> Logger:
@@ -15,10 +15,10 @@ def CreateLogger(name:str) -> Logger:
     fileHandler.setFormatter(format)
     logger.addHandler(fileHandler)
 
-    # # Stream Handler (Console)
-    # streamHandler: StreamHandler = StreamHandler(stdout)
-    # streamHandler.setLevel(ERROR)
-    # streamHandler.setFormatter(format)
-    # logger.addHandler(streamHandler)
+    # Stream Handler (Console)
+    streamHandler: StreamHandler = StreamHandler(stdout)
+    streamHandler.setLevel(WARNING)
+    streamHandler.setFormatter(format)
+    logger.addHandler(streamHandler)
 
     return logger
