@@ -1,21 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { connectToServer, sendMessage, receiveMessage } from './websocketService';
+import { useState, useEffect } from 'react';
+import { connectToServer, sendMessage, receiveMessage } from '../lib/websocketService';
 
 const Landing = () => {
   const [name, setName] = useState('');
   const [receivedMessage, setReceivedMessage] = useState('');
 
   useEffect(() => {
+    // Establish WebSocket connection
     connectToServer();
 
-    receiveMessage((message) => {
+    // Handle incoming messages
+    const unsubscribe = receiveMessage((message) => {
       setReceivedMessage(message);
     });
 
+    // Cleanup WebSocket on unmount
     return () => {
-      if (socket) {
-        socket.end();
-      }
+      unsubscribe();
     };
   }, []);
 
@@ -30,11 +31,11 @@ const Landing = () => {
     <div>
       <h1>Enter your name</h1>
       <form onSubmit={handleSubmit}>
-        <input 
-          type="text" 
-          value={name} 
-          onChange={(e) => setName(e.target.value)} 
-          placeholder="Your name" 
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Your name"
         />
         <button type="submit">Send</button>
       </form>
