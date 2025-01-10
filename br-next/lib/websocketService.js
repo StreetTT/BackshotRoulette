@@ -1,7 +1,9 @@
 let socket;
 
-export const connectToServer = (url = "ws://192.168.1.176:5050") => {
-  socket = new WebSocket(url);
+export const connectToServer = () => {
+  const SERVER_URL = "ws://localhost:5050"; 
+
+  socket = new WebSocket(SERVER_URL);
 
   socket.onopen = () => {
     console.log("Connected to server:", url);

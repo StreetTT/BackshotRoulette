@@ -186,7 +186,6 @@ body {
   
 }
 
-/* Add this to your CSS file */
 .info-box {
   position: fixed;
   top: 50%;
@@ -273,7 +272,7 @@ button:hover {
   position: absolute;
   bottom: 0;
   left: 100%;
-  margin-left: 20px; /* Adjust based on desired spacing from the box */
+  margin-left: 20px;
 }
 
 .gun span{
@@ -318,4 +317,52 @@ button:hover {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+.welcomeContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* Full viewport height */
+  width: 100vw; /* Full viewport width */
+}
+
+.welcome {
+  width: 200px;
+  height: 100px;
+}
+
+.welcome h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.welcome form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.welcome input {
+  margin-bottom: 10px;
+  background-color: #000; /* Black background */
+  color: #fff; /* White text */
+  border: none; /* Remove default border */
+  border-radius: 25px; /* Rounded corners */
+  padding: 10px 20px; /* Padding inside the input */
+  font-size: 16px; /* Adjust font size */
+  outline: none; /* Remove focus outline */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+  transition: box-shadow 0.3s ease, transform 0.2s ease; /* Smooth hover effects */
+  border: 1px solid #ccc;
+}
+
+.welcome input:focus {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4); /* Enhanced shadow on focus */
+  transform: scale(1.05); /* Slight zoom effect */
+}
+
+.welcome input::placeholder {
+  color: #aaa; /* Lighter placeholder text */
+  font-style: italic; /* Italicized placeholder */
 }

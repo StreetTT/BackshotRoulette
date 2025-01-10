@@ -1,5 +1,6 @@
 import GunInfo from "../components/GunInfo";
 import PlayerInfo from "../components/PlayerInfo";
+import { connectToServer, sendMessage } from "../lib/websocketService";
 
 const Game = () => {
   const ITEMS = [

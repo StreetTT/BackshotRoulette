@@ -13,6 +13,7 @@ const PlayerInfo = ({ opponent, playerInfo: { health, cuffed, gallery } }) => {
     pluck: "The user will be able to steal one item from the opposing player's side and use it immediately",
   };
   const personText = opponent ? "Opps" : "Self"
+  const floatDir = opponent ? "left" : "right"
 
   const [showInfoBox, setShowInfoBox] = useState(false);
   const [hideInfoBox, setHideInfoBox] = useState(false);
@@ -42,11 +43,11 @@ const PlayerInfo = ({ opponent, playerInfo: { health, cuffed, gallery } }) => {
     <div className={`player-info ${opponent ? "top" : "bottom"}`}>
       {!opponent && (
         <div className="player-status">
-         <div className="trigger" style={{float: opponent ? "left" : "right"}}>
+         <div className="trigger" style={{float: floatDir}}>
             <button onClick={() => console.log(personText + " Shot")}> Shoot {personText}</button>
           </div>
-          <div className="cuffs" style={{float: opponent ? "left" : "right"}}>{cuffed ? "🔒" : " "}</div>
-          <div className="hearts" style={{float: opponent ? "left" : "right"}}>{"❤️".repeat(health)}</div>
+          <div className="cuffs" style={{float: floatDir}}>{cuffed ? "🔒" : " "}</div>
+          <div className="hearts" style={{float: floatDir}}>{"❤️".repeat(health)}</div>
         </div>
       )}
 
@@ -55,7 +56,12 @@ const PlayerInfo = ({ opponent, playerInfo: { health, cuffed, gallery } }) => {
           <div
             key={idx}
             className={`item ${item === "8ball" ? "ball" : item}`}
-            onClick={() => !opponent && console.log(item)}
+            onClick={() => {
+              console.log(`${opponent ? "Opponent's" : "Player's"} item ${idx}: ${item}`);
+              if (opponent) {
+                itemInfoBox(item);
+              }
+            }}
             onContextMenu={(e) => {
               e.preventDefault();
               if (item !== "null") itemInfoBox(item);
@@ -75,11 +81,11 @@ const PlayerInfo = ({ opponent, playerInfo: { health, cuffed, gallery } }) => {
 
       {opponent && (
         <div className="player-status">
-         <div className="trigger" style={{float: opponent ? "left" : "right"}}>
+         <div className="trigger" style={{float: floatDir}}>
             <button onClick={() => console.log(personText + " Shot")}> Shoot {personText}</button>
           </div>
-          <div className="hearts" style={{float: opponent ? "left" : "right"}}>{"❤️".repeat(health)}</div>
-          <div className="cuffs" style={{float: opponent ? "left" : "right"}}>{cuffed ? "🔒" : " "}</div>
+          <div className="hearts" style={{float: floatDir}}>{"❤️".repeat(health)}</div>
+          <div className="cuffs" style={{float: floatDir}}>{cuffed ? "🔒" : " "}</div>
         </div>
       )}
     </div>

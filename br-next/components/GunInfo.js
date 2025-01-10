@@ -37,7 +37,7 @@ const GunInfo = ({ crit, chamber }) => {
         {crit ? "CRITICAL DAMAGE" : "Normal Damage"}
       </span>
       <div className="chamber">
-        <div className="bullets">
+        <div className="bullets"> 
           {chamber.map((bullet, index) => (
             <div key={index} className={`bullet ${bullet ? "live" : "dead"}`} />
           ))}
@@ -48,7 +48,7 @@ const GunInfo = ({ crit, chamber }) => {
         </p>
       </div>
     </div>
-  );
+  ); // <div className="bullets"> needs to be able to hide
 };
 
 export default GunInfo;
