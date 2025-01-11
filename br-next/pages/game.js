@@ -1,39 +1,47 @@
+import { useState, useEffect } from 'react';
 import GunInfo from "../components/GunInfo";
 import PlayerInfo from "../components/PlayerInfo";
-import { connectToServer, sendMessage } from "../lib/websocketService";
+import useWebSocket from "../hooks/useWebSocket";
 
 const Game = () => {
   const ITEMS = [
     "knife", "glass", "drugs", "cuffs", "voddy", "twist", 
     "spike", "8ball", "pluck", "null"
   ];
+  const { messages, sendMessage } = useWebSocket('ws://localhost:5050');
+  const [player1Info, setPlayer1Info] = useState(null);
+  const [player2Info, setPlayer2Info] = useState(null);
+  const [gunInfo, setGunInfo] = useState(null);
 
-  const genPlayerInfo = () => ({
-    health: Math.floor(Math.random() * 4) + 1,
-    cuffed: Math.random() < 0.5,
-    gallery: Array.from({ length: 8 }, () => 
-      ITEMS[Math.floor(Math.random() * ITEMS.length)]
-    ),
-  });
+  const signalsToIgnore = ['heartbeat', 'ping', 'heartbeat_ack', null];
 
-  const genChamber = () => {
-    const boolList = [
-      true, 
-      false, 
-      ...Array.from({ length: Math.floor(Math.random() * 7) }, () => Math.random() < 0.5)
-    ];
-    for (let i = boolList.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [boolList[i], boolList[j]] = [boolList[j], boolList[i]];
+  useEffect(() => {
+    console.log(messages)
+    if (messages.length > 0) {
+      let latestMessage = null;
+
+      // Skip over ignored signals
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i] && !signalsToIgnore.includes(messages[i].type)) {
+          latestMessage = messages[i];
+          break;
+        }
+      }
+
+      if (latestMessage && latestMessage.type === 'startInfo') {
+        setPlayer1Info(latestMessage.players[0]);
+        setPlayer2Info(latestMessage.players[1]);
+        setGunInfo(latestMessage.gun);
+      }
     }
-    return boolList;
-  };
+  }, [messages]);
+
 
   return (
     <main>
-      <PlayerInfo opponent={true} playerInfo={genPlayerInfo()} />
-      <GunInfo crit={Math.random() < 0.5} chamber={genChamber()} />
-      <PlayerInfo opponent={false} playerInfo={genPlayerInfo()} />
+      {player1Info && <PlayerInfo opponent={true} playerInfo={player1Info} />}
+      {gunInfo && <GunInfo crit={gunInfo.crit} chamber={gunInfo.chamber} />}
+      {player2Info && <PlayerInfo opponent={false} playerInfo={player2Info} />}
     </main>
   );
 };

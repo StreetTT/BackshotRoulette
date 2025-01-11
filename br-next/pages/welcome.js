@@ -1,32 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { connectToServer, sendMessage, receiveMessage } from '../lib/websocketService';
 
 const Landing = () => {
   const [name, setName] = useState('');
-  const [receivedMessage, setReceivedMessage] = useState('');
   const router = useRouter();
 
-
-  // useEffect(() => {
-  //   // Establish WebSocket connection
-  //   connectToServer();
-
-  //   // Handle incoming messages
-  //   const unsubscribe = receiveMessage((message) => {
-  //     setReceivedMessage(message);
-  //   });
-
-  //   // Cleanup WebSocket on unmount
-  //   return () => {
-  //     unsubscribe();
-  //   };
-  // }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (name) {
       console.log(name);
+      
+      // Send to server
+
       router.push('/game');
     }
   };
@@ -44,12 +30,6 @@ const Landing = () => {
           />
           <button type="submit">Enter</button>
         </form>
-        {/* {receivedMessage && (
-          <div>
-            <h2>Message from server:</h2>
-            <p>{receivedMessage}</p>
-          </div>
-        )} */}
       </div>
     </div>
   );

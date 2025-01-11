@@ -1,60 +1,74 @@
-import socket
-import threading
-from BR import BR
-from string import ascii_uppercase
-from random import choices
+import asyncio
+import websockets
+import json
+import random
 
-games: dict[str, BR] = {"ABCD": BR()}
-clients: dict[str, str] = {}
-HEADDER = 1024
-FORMAT = "utf-8"
-DISCONNECTMSG = "!DISSCON"
-PORT = 5050
-SERVER = socket.gethostbyname(socket.gethostname())
+ITEMS = [
+    "knife", "glass", "drugs", "cuffs", "voddy", "twist", 
+    "spike", "8ball", "pluck", "null"
+]
 
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.bind((SERVER, PORT))
+connected_clients = []
+startInfoSent = False
 
-def addrStr(addr):
-    return f"{addr[0]}::{str(addr[1])}"
+async def handler(websocket):
+    
+    connected_clients.append(websocket)
+    print(f"Client connected: {len(connected_clients)} clients connected")
 
-def handleClient(conn, addr):
-    connected = False
-    i = 0
-    keys = list(games.keys())
-    while not connected and i < len(keys):
-        code = keys[i]
-        connected = games[code].Connect(addrStr(addr))
-        i += 1
-    if not connected:
-        while not connected:
-            code = str(choices(ascii_uppercase, k=4)) 
-            if not code in games:
-                games[code] = BR()
-                connected = games[code].Connect(addrStr(addr))
+    try:
+        # Check if we have two clients connected
+        if not startInfoSent and len(connected_clients) == 2:
+
+            startInfo = {
+                "type": "startInfo",
+                "players": [
+                     {
+                        "health": random.randint(1, 5),
+                        "gallery": random.choices(ITEMS, k=8),
+                        "cuffed": random.choice([True, False])
+                    },
+                    {
+                        "health": random.randint(1, 5),
+                        "gallery": random.choices(ITEMS, k=8),
+                        "cuffed": random.choice([True, False])
+                    }
+                ],
+                "gun": {
+                    "crit": random.choice([True, False]),
+                    "chamber": random.choices([True, False], k=random.randint(2, 8))
+                }
+            }
             
-    clients[addrStr(addr)] = code
-    games[code].GetPlayer()._SetName()
+            # Send start info to both players   
+            print(f"Start info: {startInfo}")
+            await connected_clients[0].send(json.dumps(startInfo))
+            startInfo.update({"players": startInfo["players"][::-1]})  # Reverse players
+            await connected_clients[1].send(json.dumps(startInfo))
 
-    print(f"NEW CONNECTION: {addrStr(addr)}")
+            startInfoSent = True
 
-    while connected:
-        msgLength = conn.recv(HEADDER).decode(FORMAT)
-        if msgLength:
-            msg = conn.recv(int(msgLength)).decode(FORMAT)
-            if msg == DISCONNECTMSG:
-                connected = False
-            print(f"[{addr}] {msg}")
-    conn.close()
+        async for message in websocket:
+            data = json.loads(message)
+            print(f"Received message: {message}")
+            if data.get('type') == 'heartbeat':
+                await websocket.send(json.dumps({'type': 'heartbeat_ack'}))  # Respond to heartbeat
+            if data.get('type') == 'reset':
+                startInfoSent = False
+                print("Resetting")
 
-def start():
+    except websockets.exceptions.ConnectionClosedOK:
+        print("Connection closed normally")
+    finally:
+        # Remove client from connected clients list on disconnect
+        connected_clients.remove(websocket)
+        print(f"Client disconnected: {len(connected_clients)} clients connected")
+
+async def main():
     print("Server is Starting...")
-    server.listen()
-    print(f"Listening on {SERVER}")
-    while True:
-        conn, addr = server.accept()
-        thread = threading.Thread(target=handleClient, args=(conn, addr)).start()
-        print(clients)
+    server = await websockets.serve(handler, "localhost", 5050)
+    print(f"Listening on {server.local_address}:{server.local_port}")
+    await server.wait_closed()
 
 if __name__ == "__main__":
-    start()
+    asyncio.run(main())
