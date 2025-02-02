@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 
 const GunInfo = ({ crit, chamber }) => {
   const [visibleStatus, setVisibleStatus] = useState("hide");
+  const [setup, setSetup] = useState(true);
 
   useEffect(() => {
     const handleMouseEnter = (event) => {
@@ -37,11 +38,11 @@ const GunInfo = ({ crit, chamber }) => {
         {crit ? "CRITICAL DAMAGE" : "Normal Damage"}
       </span>
       <div className="chamber">
-        <div className="bullets"> 
+        {setup && <div className="bullets">
           {chamber.map((bullet, index) => (
             <div key={index} className={`bullet ${bullet ? "live" : "dead"}`} />
           ))}
-        </div>
+        </div>}
         <p>
           Dead: {chamber.filter((item) => !item).length}, Live:
           {chamber.filter((item) => item).length}

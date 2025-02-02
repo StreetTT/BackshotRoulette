@@ -1,51 +1,26 @@
-import { useState } from "react";
+import { useGameContext } from '../Contexts/GameContext';
+import { toTitleCase } from "../hooks/useTitleCase";
+
+
 
 const PlayerInfo = ({ opponent, playerInfo: { health, cuffed, gallery } }) => {
-  const items = {
-    knife: "The Gun will become 'Crit' and deal double damage for the next shot",
-    glass: "The user will see what type of round the next shot is",
-    drugs: "The user will gain one heart",
-    cuffs: "The opposing player will skip their next turn",
-    voddy: "The user will eject the current shell without firing it",
-    twist: "The polarity of the next shot will be flipped; a dead shell becomes live, and a live shell becomes dead",
-    spike: "The user has a 50% chance of regaining two hearts and a 50% chance of losing one",
-    "8ball": "The user will be told the location and type of a random bullet in the gun",
-    pluck: "The user will be able to steal one item from the opposing player's side and use it immediately",
-  };
   const personText = opponent ? "Opps" : "Self"
   const floatDir = opponent ? "left" : "right"
+  const { currentTurn, setInfoBoxItem } = useGameContext();
 
-  const [showInfoBox, setShowInfoBox] = useState(false);
-  const [hideInfoBox, setHideInfoBox] = useState(false);
-  const [infoBoxTitle, setInfoBoxTitle] = useState("");
-  const [infoBoxContent, setInfoBoxContent] = useState("");
-
-  const toTitleCase = (str) => 
-    str.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
-
-  const itemInfoBox = (item) => {
-    setShowInfoBox(true);
-    setInfoBoxTitle(item);
-    setInfoBoxContent(items[item]);
-
-    setTimeout(() => {
-      setHideInfoBox(true);
-      setTimeout(() => {
-        setInfoBoxContent("");
-        setInfoBoxTitle("");
-        setShowInfoBox(false);
-        setHideInfoBox(false);
-      }, 500);
-    }, 4000);
-  };
 
   return (
     <div className={`player-info ${opponent ? "top" : "bottom"}`}>
       {!opponent && (
         <div className="player-status">
          <div className="trigger" style={{float: floatDir}}>
-            <button onClick={() => console.log(personText + " Shot")}> Shoot {personText}</button>
+            <button onClick={() => {
+              if (currentTurn){
+                console.log(personText + " Shot")
+              }
+            }}> Shoot {personText}</button>
           </div>
+          {currentTurn && <div className="turn" style={{float: floatDir}}>Your Turn</div> }
           <div className="cuffs" style={{float: floatDir}}>{cuffed ? "🔒" : " "}</div>
           <div className="hearts" style={{float: floatDir}}>{"❤️".repeat(health)}</div>
         </div>
@@ -57,14 +32,18 @@ const PlayerInfo = ({ opponent, playerInfo: { health, cuffed, gallery } }) => {
             key={idx}
             className={`item ${item === "8ball" ? "ball" : item}`}
             onClick={() => {
-              console.log(`${opponent ? "Opponent's" : "Player's"} item ${idx}: ${item}`);
-              if (opponent) {
-                itemInfoBox(item);
+              if (!currentTurn){
+                return
               }
+              console.log(`${opponent ? "Opponent's" : "Player's"} item ${idx}: ${item}`);
+              // if (opponent && item !== "null") {
+              //   setInfoBoxItem(item);
+              // }
+              // IDK if I like this functionality
             }}
             onContextMenu={(e) => {
               e.preventDefault();
-              if (item !== "null") itemInfoBox(item);
+              if (item !== "null") setInfoBoxItem(item);
             }}
           >
             <p>{item === "null" ? "" : toTitleCase(item)}</p>
@@ -72,20 +51,18 @@ const PlayerInfo = ({ opponent, playerInfo: { health, cuffed, gallery } }) => {
         ))}
       </div>
 
-      {showInfoBox && (
-        <div className={`info-box ${hideInfoBox ? "slide-out" : ""}`}>
-          <h4>{toTitleCase(infoBoxTitle)}</h4>
-          <p>{infoBoxContent}</p>
-        </div>
-      )}
-
       {opponent && (
         <div className="player-status">
          <div className="trigger" style={{float: floatDir}}>
-            <button onClick={() => console.log(personText + " Shot")}> Shoot {personText}</button>
+            <button onClick={() => {
+              if (!currentTurn){
+                console.log(personText + " Shot")
+              }
+            }}> Shoot {personText}</button>
           </div>
           <div className="hearts" style={{float: floatDir}}>{"❤️".repeat(health)}</div>
           <div className="cuffs" style={{float: floatDir}}>{cuffed ? "🔒" : " "}</div>
+          {!currentTurn && <div className="turn" style={{float: floatDir}}>Their Turn</div> }
         </div>
       )}
     </div>

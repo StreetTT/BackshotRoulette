@@ -1,0 +1,10 @@
+{
+    "configurations": [
+        {
+            "name": "Python Debugger: BR SERVER",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "C:\\Users\\dmlai\\Documents\\Coding\\BackshotRoulette\\BRServer.py"
+        }
+    ]
+}

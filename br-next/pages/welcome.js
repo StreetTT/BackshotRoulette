@@ -1,18 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { useWebSocketContext } from '../Contexts/WebSocketContext';
 
 const Landing = () => {
   const [name, setName] = useState('');
   const router = useRouter();
-
+  const { sendMessage } = useWebSocketContext();
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (name) {
-      console.log(name);
-      
-      // Send to server
-
+      sendMessage({ type: 'ConnectToGame', name: name });
       router.push('/game');
     }
   };
