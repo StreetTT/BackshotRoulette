@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useWebSocketContext } from '../Contexts/WebSocketContext';
+import { useWebSocketContext } from '../contexts/WebSocketContext';
 
 const Landing = () => {
   const [name, setName] = useState('');

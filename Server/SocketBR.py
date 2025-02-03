@@ -1,6 +1,5 @@
 import random
 from typing import Callable
-from BRServer import Client
 
 class SocketBR:
     def __init__(self):
@@ -77,7 +76,7 @@ class SocketBR:
                 items -= 1
     
     def __GetOpponent(self) -> "Player":
-        return [player for player in self.__players if player.GetClient().GetClientID() != self.__currentPlayer.GetClient().GetClientID()][0]
+        return [player for player in self.__players if player.GetClientID() != self.__currentPlayer.GetClientID()][0]
     
     def __IsRoundOver(self) -> bool:
         roundOver: bool = self.__GetOpponent().GetHealth() == 0 or self.__currentPlayer.GetHealth() == 0
@@ -99,7 +98,7 @@ class SocketBR:
         return( {
                 "type": "startInfo",
                 "players": [{
-                        "ID": player.GetClient().GetClientID(),
+                        "ID": player.GetClientID(),
                         "health": player.GetHealth(),
                         "gallery": player.GetGalleryList(),
                         "cuffed": player.IsCuffed()
@@ -196,16 +195,19 @@ class Gun:
         return (bullet + 1, self.__chamber[bullet])
     
 class Player:
-    def __init__(self, client) -> None:
-        self.__name: str = client.GetName()
-        self.__client: Client = client
+    def __init__(self, clientID, name = "Unknown") -> None:
+        self.__name: str = name
+        self.__clientID = clientID
         self.__health: int = 0
         self.__gallery: Gallery = Gallery()
         self.__cuffed: bool = False
         self.__wins: int = 0
     
-    def GetClient(self) -> str:
-        return self.__client
+    def GetName(self) -> str:
+        return self.__name
+    
+    def GetClientID(self) -> str:
+        return self.__clientID
     
     def SetHeath(self, health: int) -> None:
         self.__health = health

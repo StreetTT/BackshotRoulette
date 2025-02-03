@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { useWebSocketContext } from '../Contexts/WebSocketContext';
+import { useWebSocketContext } from './WebSocketContext';
 
 
 const GameContext = createContext(null);
@@ -27,11 +27,7 @@ export const GameContextProvider = ({ children }) => {
         }
       }, [latestMessage]);
 
-      useEffect(() => {}, [infoBoxItem]);
-    
-
-    
-
+      
 return (
     <GameContext.Provider value={{ player1Info, player2Info, gunInfo, loading, currentTurn, infoBoxItem, setInfoBoxItem }}>
         {children}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { toTitleCase } from "../hooks/useTitleCase";
-import { useGameContext } from '../Contexts/GameContext';
+import { useGameContext } from '../contexts/GameContext';
 
 
 const HelpBox = ({ }) => {
@@ -38,7 +38,6 @@ const HelpBox = ({ }) => {
     };
 
     useEffect(() => {
-        console.log("Right click", infoBoxItem);
         if (infoBoxItem) {
           displayInfoBox(infoBoxItem);
         }

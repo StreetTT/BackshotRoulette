@@ -1,7 +1,7 @@
 import '../styles/globals.css'; 
 import '../styles/App.css';
-import { WebSocketProvider } from '../Contexts/WebSocketContext';
-import { GameContextProvider } from '../Contexts/GameContext';
+import { WebSocketProvider } from '../contexts/WebSocketContext';
+import { GameContextProvider } from '../contexts/GameContext';
 
 function MyApp({ Component, pageProps }) {
   return (

@@ -1,7 +1,7 @@
 import GunInfo from "../components/GunInfo";
 import PlayerInfo from "../components/PlayerInfo";
 import HelpBox from "../components/HelpBox";
-import { useGameContext } from '../Contexts/GameContext';
+import { useGameContext } from '../contexts/GameContext';
 
 const Game = () => {
   const ITEMS = [

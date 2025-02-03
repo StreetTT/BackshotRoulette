@@ -1,4 +1,4 @@
-import { useGameContext } from '../Contexts/GameContext';
+import { useGameContext } from '../contexts/GameContext';
 import { toTitleCase } from "../hooks/useTitleCase";
 
 
