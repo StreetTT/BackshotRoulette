@@ -10,7 +10,7 @@ const Landing = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (name) {
-      sendMessage({ type: 'ConnectToGame', name: name });
+      sendMessage({ type: 'LoggingIn', name: name });
       router.push('/game');
     }
   };

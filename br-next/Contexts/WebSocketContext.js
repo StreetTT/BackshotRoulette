@@ -5,9 +5,9 @@ const WebSocketContext = createContext(null);
 export const WebSocketProvider = ({ children }) => {
     const ws = useRef(null);
 	const [isConnected, setIsConnected] = useState(false);
-	const [messages, setMessages] = useState([]); // Store received messages
-	const [retryInterval, setRetryInterval] = useState(500); // Start with 1s retry
-	const clientID = useRef(`client-${Math.random().toString(36).substr(2, 9)}`);
+	const [messages, setMessages] = useState([]);
+	const [retryInterval, setRetryInterval] = useState(500);
+    const [clientID, setClientID] = useState(null);
 
 	const initializeWebSocket = () => {
         if(isConnected || (ws.current && ws.current.readyState === WebSocket.OPEN)) {
@@ -21,12 +21,20 @@ export const WebSocketProvider = ({ children }) => {
         ws.current.onopen = () => {
             console.log("WebSocket connection opened.");
             setIsConnected(true);
-            setRetryInterval(1000); // Reset retry interval on success
+            setRetryInterval(500);
+
+            // Retrieve or generate a client ID
+            let storedClientID = localStorage.getItem('clientID');
+            if (!storedClientID) {
+                storedClientID = `client-${Math.random().toString(36).substr(2, 9)}`;
+                localStorage.setItem('clientID', storedClientID);
+            }
+            setClientID(storedClientID);
 
             // Send an identification message to the server
             ws.current.send(JSON.stringify({
                 type: "ReconnectAttempt",
-                clientID: clientID.current
+                clientID: storedClientID
             }));
         };
 
@@ -50,7 +58,7 @@ export const WebSocketProvider = ({ children }) => {
             setTimeout(() => {
                 const newRetryInterval = Math.min(retryInterval * 2, 30000); // Max out at 30s
                 console.log(`Reconnecting in ${newRetryInterval / 1000} seconds...`);
-                setRetryInterval(newRetryInterval); // Max out at 30s
+                setRetryInterval(newRetryInterval);
                 initializeWebSocket();
             }, retryInterval);
         };
@@ -58,7 +66,8 @@ export const WebSocketProvider = ({ children }) => {
 
 	const sendMessage = (message) => {
         if (isConnected) {
-            ws.current.send(JSON.stringify(message));
+            const messageWithClientID = { ...message, clientID: clientID };
+            ws.current.send(JSON.stringify(messageWithClientID));
         } else {
             console.warn("WebSocket is not open. Message not sent.");
         }
@@ -70,7 +79,7 @@ export const WebSocketProvider = ({ children }) => {
     }, []);
 
     return (
-        <WebSocketContext.Provider value={{ ws: ws.current, messages, sendMessage }}>
+        <WebSocketContext.Provider value={{ clientID, messages, sendMessage, latestMessage: messages[messages.length - 1] }}>
             {children}
         </WebSocketContext.Provider>
     );

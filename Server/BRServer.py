@@ -1,14 +1,8 @@
 import asyncio
 import websockets
 import json
-import threading
 from websockets.asyncio.server import Server
 import SocketBR
-
-ITEMS = [
-    "knife", "glass", "drugs", "cuffs", "voddy", "twist", 
-    "spike", "8ball", "pluck", "null"
-]
 
 class BRServer:
     def __init__(self):
@@ -16,49 +10,66 @@ class BRServer:
         self.__games: list[SocketBR.SocketBR] = []
     
     async def __handler(self, websocket):
-
-        try:
+        try: # Handshake
             message = await websocket.recv()
             data = json.loads(message)
+            clientID = data.get("clientID")
 
-            if data.get("type") == "ReconnectAttempt":
-                clientID = data.get("clientID")
-                if clientID in self.__clients:
-                    print(f"Client {clientID} reconnected.")
-                    self.__clients[clientID]["websocket"] = websocket
-                else:
-                    print(f"New connection: {clientID}")
-                    self.__clients[clientID] = {
-                        "websocket": websocket,
-                        "name": data.get("name", "Unknown"),  # Store player's name
-                        "game": None
-                    }
-                    print(f"{len(self.__clients)} clients connected\n")
-            # Listen for messages
-            async for message in websocket:
+            await self.__RouteMessage(clientID, websocket, data)
+            
+            async for message in websocket: # Main loop
                 data = json.loads(message)
-                await self.__RouteMessage(clientID, data)
+                await self.__RouteMessage(clientID, websocket, data)
 
         except websockets.exceptions.ConnectionClosedError as e:
             print(f"Connection closed with error: {e}")
         except websockets.exceptions.ConnectionClosedOK:
             print("Connection closed normally")
+        except EOFError as e:
+            print(f"Connection closed unexpectedly with EOFError: {e}")
         except Exception as e:
             print(f"Unexpected handshake error: {e}")
-        finally:
+        
+        finally: # Cleanup
             if clientID in self.__clients:
-                self.__clients[clientID]["websocket"] = None  # Mark as inactive
+                self.__clients[clientID]["websocket"] = None
+            print(f"{clientID} Disconnected")
             print(f"{len(self.__clients)} clients connected\n")
 
-    async def __RouteMessage(self, clientID, data):
-        if data.get('type') == 'ConnectToGame':
-            name = data.get("name", "Unknown")
+    async def __RouteMessage(self, clientID, websocket, data):
+        if data.get('type') == 'LoggingIn': # Login attempt
+            name = data.get("name", None)
             self.__clients[clientID]["name"] = name
             await self.__StartGameIfReady()
+
+        if data.get("type") == "ReconnectAttempt":  # (Re)Connection attempt 
+            
+            if clientID in self.__clients: # If client is already in the list, it's a reconnection
+                print(f"Client {clientID} reconnected.")
+                self.__clients[clientID]["websocket"] = websocket
+                game = self.__clients[clientID]["game"]
+                if game and game.IsGameOngoing(): # If the client is in a game, send the game info
+                    gameInfo = game.GetGameInfo()
+                    asyncio.create_task(websocket.send(json.dumps(gameInfo)))
+                
+                else:
+                    self.__clients[clientID]["game"] = None
+                    await self.__StartGameIfReady()
+            
+            else:  # If client is not in the list, it's a new connection
+                print(f"{clientID} Connected")
+                self.__clients[clientID] = {
+                    "websocket": websocket,
+                    "name": data.get("name", None),
+                    "game": None
+                }
+                print(f"{len(self.__clients)} clients connected\n")
+        
     
     async def __StartGameIfReady(self):
-        # Check if we have two eligible clients connected
-        availableClients = [cid for cid in self.__clients if self.__clients[cid]["game"] is None]
+        
+        # Check  if there are two available clients: clients that are not in a game and have a name
+        availableClients = [cid for cid in self.__clients if (self.__clients[cid]["game"] is None) and (self.__clients[cid]["name"] is not None)]
         
         if len(availableClients) >= 2:
             
@@ -75,25 +86,18 @@ class BRServer:
 
             self.__games.append(game)
 
+            # Log Game start
+            print(f"Starting Game: {id(game)}")
+            print(f"Players: {player1.GetName()} and {player2.GetName()}")
+            print(f"Clients: {player1.GetClientID()} and {player2.GetClientID()}\n")
             # Setup the game and get start info
-            startInfo, currentPlayer = game.GetStartInfo()
-
+            game.StartGame()
+            gameInfo = game.GetGameInfo()
 
             # Send start info to both players
             for clientID in [player1.GetClientID(), player2.GetClientID()]:
                 ws = self.__clients[clientID]["websocket"]
-                if ws:
-                    if startInfo['players'][0]['ID'] == clientID:
-                        startInfo['players'] = startInfo['players'][::-1]
-                    asyncio.create_task(ws.send(json.dumps(startInfo)))
-
-            # Notify the starting player
-            starting_ws = self.__clients[currentPlayer.GetClientID()]["websocket"]
-            if starting_ws:
-                asyncio.create_task(starting_ws.send(json.dumps({
-                    "type": "currentTurn",
-                    "currentTurn": True
-                })))
+                asyncio.create_task(ws.send(json.dumps(gameInfo)))
 
     async def Main(self):
         print("Server is Starting...")

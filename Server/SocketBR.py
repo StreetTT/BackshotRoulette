@@ -88,27 +88,33 @@ class SocketBR:
             self.__gun.Empty()
         return roundOver
     
-    def GetStartInfo(self):
+    def StartGame(self):
         if len(self.__players) != 2:
             return None
         self.__currentPlayer = self.__players[0]
         self.__SetGameMode(2)
         self.__SetRound()
         self.__NewLoad()
-        return( {
-                "type": "startInfo",
-                "players": [{
-                        "ID": player.GetClientID(),
-                        "health": player.GetHealth(),
-                        "gallery": player.GetGalleryList(),
-                        "cuffed": player.IsCuffed()
-                } for player in self.__players],
-                "gun": {
-                    "crit": self.__gun.GetCrit(),
-                    "chamber": list(sorted(self.__gun.GetChamber()))
-                }
+    
+    def GetGameInfo(self):
+        return {
+            "type": "gameInfo",
+            "players": [{
+                    "ID": player.GetClientID(),
+                    "health": player.GetHealth(),
+                    "gallery": player.GetGalleryList(),
+                    "cuffed": player.IsCuffed()
+            } for player in self.__players],
+            "gun": {
+                "crit": self.__gun.GetCrit(),
+                "chamber": list(sorted(self.__gun.GetChamber(), reverse=True)),
+            },
+            "currentTurn": self.__currentPlayer.GetClientID()
+        }
+    
+    def IsGameOngoing(self) -> bool:
+        return len(self.__players) == 2
 
-        }, self.__currentPlayer)
 
     def __Knife(self) -> None:
         pass

@@ -4,10 +4,6 @@ import HelpBox from "../components/HelpBox";
 import { useGameContext } from '../contexts/GameContext';
 
 const Game = () => {
-  const ITEMS = [
-    "knife", "glass", "drugs", "cuffs", "voddy", "twist", 
-    "spike", "8ball", "pluck", "null"
-  ];
   const { player1Info, player2Info, gunInfo, loading } = useGameContext();
 
   return (
